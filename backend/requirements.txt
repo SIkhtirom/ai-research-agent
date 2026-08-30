@@ -1,0 +1,38 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pydantic-settings==2.6.1
+sqlalchemy==2.0.36
+
+# AI Orchestration (RAG Pipeline)
+langchain==0.3.14
+langchain-community==0.3.14
+langchain-openai==0.2.14
+langchain-google-genai==2.0.6
+
+# Vector Database
+chromadb==0.5.23
+faiss-cpu==1.9.0.post1
+
+# LLM Engine
+openai==1.59.7
+google-generativeai==0.8.4
+
+# Local Embeddings (CPU)
+sentence-transformers==3.3.1
+
+# Data Ingestion & Parsing
+pypdf==5.1.0
+marker-pdf==1.4.10
+python-docx==1.1.2
+python-pptx==1.0.2
+requests==2.32.3
+beautifulsoup4==4.12.3
+
+# Optional OCR fallback for scanned/image-only PDFs (needs Tesseract OCR binary installed)
+pytesseract==0.3.13
+pypdfium2==5.13.0
+
+# Export
+markdown==3.7
+reportlab==4.2.2

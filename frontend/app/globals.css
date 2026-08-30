@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Lock page scroll at the document level so it applies from the very first
+   SSR paint (no hydration window where the page can scroll). Inner areas
+   (e.g. the main content region) scroll independently via overflow. */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* marquee: single line begins pushed fully off the RIGHT edge, travels
+     across the viewport, and exits fully off the LEFT edge */
+  @keyframes marquee {
+    0% {
+      transform: translateX(100vw);
+    }
+    100% {
+      transform: translateX(-100vw);
+    }
+  }
+  .animate-marquee {
+    display: inline-block;
+    white-space: nowrap;
+    animation: marquee 30s linear infinite;
+    will-change: transform;
+  }
+  .animate-marquee-reverse {
+    display: inline-block;
+    white-space: nowrap;
+    animation: marquee 30s linear infinite reverse;
+  }
+}
