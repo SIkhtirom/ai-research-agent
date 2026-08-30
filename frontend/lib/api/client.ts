@@ -1,23 +1,40 @@
 // Backend API base URL. Precedence:
-//   1. NEXT_PUBLIC_API_URL      e.g. "https://your-tunnel.ngrok.io" (origin only)
-//   2. NEXT_PUBLIC_API_BASE_URL (legacy) e.g. "https://your-tunnel.ngrok.io/api/v1"
-//   3. Local dev fallback - never relied on when a public tunnel is active.
-// The env values are inlined by Next.js at start time; expose.sh injects the
-// tunnel URL so remote testers hit the backend that is actually reachable.
-const API_ORIGIN = (
+//   1. NEXT_PUBLIC_API_URL       e.g. "https://your-api.b4a.run"
+//   2. NEXT_PUBLIC_API_BASE_URL (legacy)
+//   3. Local dev fallback (never used in production - set #1 on Vercel).
+const API_ENV_VALUE =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "http://127.0.0.1:8000"
-)
-  .trim()
-  .replace(/\/+$/, "");
-const API_BASE_URL = API_ORIGIN.endsWith("/api/v1")
-  ? API_ORIGIN
-  : `${API_ORIGIN}/api/v1`;
+  "http://127.0.0.1:8000";
+
+// Normalise whatever was configured so every paste form "just works":
+//   https://host                       -> https://host/api/v1
+//   https://host/                      -> https://host/api/v1
+//   https://host/api/v1                -> https://host/api/v1
+//   https://host/api/v1/  -> https://host/api/v1
+//   https://host/api/v1/ingest/files   -> https://host/api/v1
+//   https://host/api/v1/ingest/file    -> https://host/api/v1
+function resolveApiBaseUrl(raw: string): string {
+  const value = raw.trim();
+  // If someone pasted a full endpoint path (e.g. copied from Swagger UI),
+  // cut everything after the "/api/v1" prefix so we never double it up.
+  const apiIndex = value.indexOf("/api/v1");
+  const originOrApi = apiIndex !== -1
+    ? value.slice(0, apiIndex + "/api/v1".length)
+    : value.replace(/\/+$/, "");
+  return originOrApi.endsWith("/api/v1")
+    ? originOrApi
+    : `${originOrApi}/api/v1`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl(API_ENV_VALUE);
+
+// Open the browser DevTools console to see which server is being called.
+console.debug("[api] API base URL resolved to:", API_BASE_URL);
 
 if (!process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_BASE_URL) {
   console.warn(
-    `[api] NEXT_PUBLIC_API_URL not set - defaulting to local dev API: ${API_BASE_URL}`,
+    `[api] NEXT_PUBLIC_API_URL not set - this build uses the local dev API: ${API_BASE_URL}`,
   );
 }
 

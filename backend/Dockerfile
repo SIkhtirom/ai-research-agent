@@ -27,4 +27,7 @@ RUN mkdir -p /app/data
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# PaaS providers (Back4app, Render, Railway, ...) sometimes inject a PORT env
+# var that their ingress expects. Default to 8000 so local / Docker-Slim runs
+# are unchanged. The 0.0.0.0 bind is required inside any container.
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
