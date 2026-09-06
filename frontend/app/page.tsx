@@ -1,431 +1,234 @@
-"use client";
+import type { Metadata } from "next";
+import Link from "next/link";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+export const metadata: Metadata = {
+  title: "AI Research & Knowledge Synthesis Agent",
+  description:
+    "Agen AI untuk mengumpulkan banyak sumber, mengajukan pertanyaan lintas dokumen, dan mengekspor hasil riset yang bersitasi.",
+};
 
-import ChatSection from "@/components/ChatSection";
-import DocumentPanel from "@/components/DocumentPanel";
-import ExportPanel, { type ExportFormat } from "@/components/ExportPanel";
-import Sidebar from "@/components/Sidebar";
-import ToastHost from "@/components/ToastHost";
-import UploadSection from "@/components/UploadSection";
-import { apiClient } from "@/lib/api/client";
-import type {
-  ChatMessage,
-  DeleteDocumentResponse,
-  FileIngestItem,
-  MultiIngestResponse,
-  SessionDetail,
-  SessionDocument,
-  SessionSummary,
-  ToastItem,
-} from "@/types/dashboard";
+const features = [
+  {
+    number: "01",
+    title: "Unggah Sumber",
+    body: "Kumpulkan PDF, DOCX, PPTX, TXT, atau tautan web dalam satu sesi. Unggah banyak file sekaligus dan biarkan semuanya diindeks menjadi satu konteks riset.",
+  },
+  {
+    number: "02",
+    title: "Tanya Asisten",
+    body: "Ajukan pertanyaan apa pun dan terima jawaban yang disintesis langsung dari sumber Anda, lengkap dengan kutipan yang dapat ditelusuri kembali.",
+  },
+  {
+    number: "03",
+    title: "Ekspor Hasil",
+    body: "Unduh ringkasan riset dalam format pilihan Anda — Markdown, PDF siap cetak, atau slide presentasi — cukup dengan satu klik.",
+  },
+];
 
-const asciiTexture = `)         ,                                  ,
-/        .                               .
- )  .,'.          ,                  .,;:;:;'
- )  ,cccccc:'.       .      ,       ,cccccccc:.
- /   .   ,ccccccc:.        .,;:;.  .:cccccccccc:
-     .;cccccccccccccc;.  .;cccccc;,:ccccccccccc;.
-      .:ccccccccccccccccc,:cccccccccccccccccccc;
-       .,:cccccccccccccccccccccccccccccccccccc:'
-         .,:;;:ccccccccccc;:::::.,;:cccccccc:;;
-                          ..,:,:,...:;:;;;:..
-`;
+const steps = [
+  {
+    number: "01",
+    title: "Kumpulkan",
+    body: "Unggah file dan tautan sumber ke dalam satu sesi riset yang terorganisir.",
+  },
+  {
+    number: "02",
+    title: "Tanyakan",
+    body: "Diskusikan lintas sumber dengan asisten yang menjawab berdasarkan kutipan nyata.",
+  },
+  {
+    number: "03",
+    title: "Ekspor",
+    body: "Simpan ringkasan riset sesuai format yang Anda butuhkan, kapan saja.",
+  },
+];
 
-export default function DashboardPage() {
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
-  const [activeDocuments, setActiveDocuments] = useState<SessionDocument[]>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isSessionsLoading, setIsSessionsLoading] = useState(true);
-  const [isChatLoading, setIsChatLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  const messageIdRef = useRef(0);
-  const toastIdRef = useRef(0);
-  const knownSessionIdsRef = useRef<Set<number>>(new Set());
-
-  const nextMessageId = useCallback(() => {
-    messageIdRef.current += 1;
-    return messageIdRef.current;
-  }, []);
-
-  const dismissToast = useCallback((id: number) => {
-    setToasts((previous) => previous.filter((toast) => toast.id !== id));
-  }, []);
-
-  const showToast = useCallback(
-    (type: ToastItem["type"], message: string) => {
-      toastIdRef.current += 1;
-      const id = toastIdRef.current;
-      setToasts((previous) => [...previous, { id, type, message }]);
-      window.setTimeout(() => dismissToast(id), 4000);
-    },
-    [dismissToast],
-  );
-
-  const refreshSessions = useCallback(async () => {
-    const knownIds = knownSessionIdsRef.current;
-    if (knownIds.size === 0) {
-      setSessions([]);
-      return;
-    }
-    try {
-      const sessionList = await apiClient.get<SessionSummary[]>("/sessions");
-      setSessions(sessionList.filter((session) => knownIds.has(session.id)));
-    } catch {
-      showToast("error", "Gagal memuat daftar sesi.");
-    }
-  }, [showToast]);
-
-  const registerSessionId = useCallback((sessionId: number) => {
-    knownSessionIdsRef.current.add(sessionId);
-  }, []);
-
-  const loadSessionDetail = useCallback(
-    async (sessionId: number) => {
-      try {
-        const detail = await apiClient.get<SessionDetail>(`/sessions/${sessionId}`);
-        const historicalMessages: ChatMessage[] = [...detail.messages]
-          .reverse()
-          .flatMap((entry) => [
-            { id: nextMessageId(), role: "user", content: entry.prompt } as ChatMessage,
-            {
-              id: nextMessageId(),
-              role: "assistant",
-              content: entry.generated_response,
-              citations: entry.citations,
-            } as ChatMessage,
-          ]);
-        setMessages(historicalMessages);
-        setActiveDocuments(detail.documents);
-        setActiveSessionId(sessionId);
-      } catch {
-        showToast("error", "Gagal memuat obrolan sesi.");
-      }
-    },
-    [nextMessageId, showToast],
-  );
-
-  const reloadActiveSession = useCallback(async () => {
-    if (activeSessionId === null) return;
-    try {
-      const detail = await apiClient.get<SessionDetail>(`/sessions/${activeSessionId}`);
-      setActiveDocuments(detail.documents);
-    } catch {
-      // silent - session list refresh still informs the user
-    }
-  }, [activeSessionId]);
-
-  useEffect(() => {
-    // Trial mode: start with an empty session list on every page load.
-    // Old sessions remain stored in the backend unless deleted manually, but
-    // they are not auto-loaded into the sidebar.
-    setIsSessionsLoading(false);
-  }, []);
-
-  const handleNewSession = useCallback(() => {
-    setActiveSessionId(null);
-    setMessages([]);
-    setActiveDocuments([]);
-  }, []);
-
-  const handleSelectSession = useCallback(
-    (sessionId: number) => {
-      loadSessionDetail(sessionId);
-    },
-    [loadSessionDetail],
-  );
-
-  const handleFilesUpload = useCallback(
-    async (
-      files: File[],
-      onProgress?: (percent: number) => void,
-    ): Promise<FileIngestItem[]> => {
-      if (files.length === 0) return [];
-      setIsUploading(true);
-      try {
-        const response = await apiClient.uploadFilesWithProgress<MultiIngestResponse>(
-          "/ingest/files",
-          files,
-          activeSessionId ?? undefined,
-          (percent) => onProgress?.(percent),
-        );
-        onProgress?.(100);
-        const succeeded = response.files.filter((file) => file.success).length;
-        // Only switch to / register the session when at least one file actually
-        // succeeded and the backend returned a valid session id. A fully-rejected
-        // batch must not create an empty session entry in the sidebar/history.
-        if (succeeded > 0 && response.session_id > 0) {
-          setActiveSessionId(response.session_id);
-          registerSessionId(response.session_id);
-          await refreshSessions();
-          await loadSessionDetail(response.session_id);
-        }
-        showToast(
-          succeeded === response.files.length ? "success" : "info",
-          `${succeeded} dari ${response.files.length} file berhasil diindeks ke sesi.`,
-        );
-        return response.files;
-      } catch (error) {
-        showToast(
-          "error",
-          error instanceof Error ? error.message : "Gagal mengunggah dokumen.",
-        );
-        return [];
-      } finally {
-        setIsUploading(false);
-      }
-    },
-    [activeSessionId, registerSessionId, refreshSessions, loadSessionDetail, showToast],
-  );
-
-  const handleUrlUpload = useCallback(
-    async (url: string): Promise<boolean> => {
-      setIsUploading(true);
-      try {
-        const response = await apiClient.post<{ session_id: number; message: string }>(
-          "/ingest/url",
-          { url, session_id: activeSessionId ?? null },
-        );
-        setActiveSessionId(response.session_id);
-        registerSessionId(response.session_id);
-        await refreshSessions();
-        await loadSessionDetail(response.session_id);
-        showToast("success", response.message);
-        return true;
-      } catch (error) {
-        showToast(
-          "error",
-          error instanceof Error ? error.message : "Gagal mengunggah tautan.",
-        );
-        return false;
-      } finally {
-        setIsUploading(false);
-      }
-    },
-    [activeSessionId, registerSessionId, refreshSessions, loadSessionDetail, showToast],
-  );
-
-  const handleDeleteDocument = useCallback(
-    async (document: SessionDocument): Promise<boolean> => {
-      if (activeSessionId === null || deletingId !== null) return false;
-      setDeletingId(document.id);
-      try {
-        const response = await apiClient.del<DeleteDocumentResponse>(
-          `/sessions/${activeSessionId}/documents/${document.id}`,
-        );
-        showToast("success", `Dokumen dihapus (${response.documents_removed} bagian).`);
-        await refreshSessions();
-        await reloadActiveSession();
-        return true;
-      } catch (error) {
-        showToast(
-          "error",
-          error instanceof Error ? error.message : "Gagal menghapus dokumen.",
-        );
-        return false;
-      } finally {
-        setDeletingId(null);
-      }
-    },
-    [activeSessionId, deletingId, reloadActiveSession, refreshSessions, showToast],
-  );
-
-  const handleDeleteUploadedFile = useCallback(
-    async (documentId: number): Promise<boolean> => {
-      return handleDeleteDocument({ id: documentId } as SessionDocument);
-    },
-    [handleDeleteDocument],
-  );
-
-  const handleSendQuery = useCallback(
-    async (query: string) => {
-      const userMessage: ChatMessage = {
-        id: nextMessageId(),
-        role: "user",
-        content: query,
-      };
-      setMessages((previous) => [...previous, userMessage]);
-      setIsChatLoading(true);
-
-      try {
-        const response = await apiClient.post<{
-          session_id: number;
-          generated_response: string;
-          citations: ChatMessage["citations"];
-          include_citations: boolean;
-        }>("/chat/query", { query, session_id: activeSessionId ?? null });
-
-        setActiveSessionId(response.session_id);
-        registerSessionId(response.session_id);
-        setMessages((previous) => [
-          ...previous,
-          {
-            id: nextMessageId(),
-            role: "assistant",
-            content: response.generated_response,
-            citations: response.citations,
-            includeCitations: response.include_citations,
-          },
-        ]);
-        await refreshSessions();
-      } catch (error) {
-        showToast(
-          "error",
-          error instanceof Error ? error.message : "Gagal memproses pertanyaan.",
-        );
-      } finally {
-        setIsChatLoading(false);
-      }
-    },
-    [activeSessionId, registerSessionId, nextMessageId, refreshSessions, showToast],
-  );
-
-  const handleExport = useCallback(
-    async (format: ExportFormat) => {
-      if (activeSessionId === null) {
-        showToast("info", "Unggah dokumen terlebih dahulu untuk dapat melakukan ekspor.");
-        return;
-      }
-      setIsExporting(true);
-      try {
-        const { blob, filename } = await apiClient.downloadFile(
-          `/export/${activeSessionId}?format=${format}`,
-        );
-        const objectUrl = URL.createObjectURL(blob);
-        const anchor = document.createElement("a");
-        anchor.href = objectUrl;
-        anchor.download = filename;
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        URL.revokeObjectURL(objectUrl);
-        showToast("success", "Ekspor berhasil diunduh.");
-      } catch (error) {
-        showToast(
-          "error",
-          error instanceof Error ? error.message : "Gagal mengekspor hasil.",
-        );
-      } finally {
-        setIsExporting(false);
-      }
-    },
-    [activeSessionId, showToast],
-  );
-
+export default function LandingPage() {
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-midnight-void text-soft-mist">
-      {/* Mobile top bar */}
-      <div className="z-40 shrink-0 border-b border-white/10 bg-carbon-panel lg:hidden">
-        <div className="flex items-center gap-2 px-4 py-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-electric-indigo text-sm font-bold text-pure-signal">
-            AI
-          </span>
-          <select
-            value={activeSessionId ?? ""}
-            onChange={(event) => {
-              const value = event.target.value;
-              if (value) handleSelectSession(Number(value));
-              else handleNewSession();
-            }}
-            className="min-w-0 flex-1 rounded-sm border border-white/10 bg-graphite-lift px-2 py-2 text-sm text-soft-mist outline-none focus:border-electric-indigo"
-          >
-            <option value="">Buat sesi baru…</option>
-            {sessions.map((session) => (
-              <option key={session.id} value={session.id}>
-                {session.title}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={handleNewSession}
-            className="shrink-0 rounded-sm bg-electric-indigo p-2 text-pure-signal"
-            aria-label="Buat sesi baru"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div className="flex min-h-0 flex-1">
-        <Sidebar
-          sessions={sessions}
-          activeSessionId={activeSessionId}
-          isLoading={isSessionsLoading}
-          onSelectSession={handleSelectSession}
-          onNewSession={handleNewSession}
-        />
-
-        <main className="relative min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:py-8">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 z-0 h-72 select-none overflow-hidden"
-          >
-            <pre className="whitespace-pre font-mono text-[10px] leading-tight text-electric-indigo opacity-[0.14]">
-              {asciiTexture}
-            </pre>
-          </div>
-
-          <header className="relative z-10 mb-6">
-            <h1 className="text-2xl font-bold tracking-tight text-pure-signal">
+    <main className="h-screen scroll-smooth overflow-y-auto bg-midnight-void text-soft-mist">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-midnight-void/90 backdrop-blur">
+        <nav className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-5">
+          <a href="#" className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-electric-indigo text-sm font-bold text-pure-signal">
+              AI
+            </span>
+            <span className="hidden text-sm font-bold tracking-tight text-pure-signal sm:block">
               AI Research &amp; Knowledge Synthesis Agent
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-soft-mist/75">
-              Kelola sumber, ajukan pertanyaan, dan ekspor hasil riset Anda. Unggah banyak
-              file sekaligus dalam satu sesi untuk dibahas secara kolektif.
-            </p>
-          </header>
+            </span>
+          </a>
 
-          <div className="relative z-10 grid grid-cols-1 gap-5 lg:grid-cols-3">
-            <div className="space-y-5 lg:col-span-1">
-              <UploadSection
-                isUploading={isUploading}
-                onFilesUpload={handleFilesUpload}
-                onUrlUpload={handleUrlUpload}
-                onDeleteUploadedFile={handleDeleteUploadedFile}
-              />
-              <DocumentPanel
-                documents={activeDocuments}
-                onDelete={handleDeleteDocument}
-                deletingId={deletingId}
-              />
-              <ExportPanel isExporting={isExporting} onExport={handleExport} />
-            </div>
-
-            <div className="flex min-h-[32rem] flex-col lg:col-span-2 lg:h-full">
-              <ChatSection
-                messages={messages}
-                isLoading={isChatLoading}
-                onSendQuery={handleSendQuery}
-              />
-            </div>
+          <div className="hidden items-center gap-8 md:flex">
+            <a href="#fitur" className="text-sm font-medium text-soft-mist/70 transition-colors hover:text-pure-signal">
+              Fitur
+            </a>
+            <a href="#cara-kerja" className="text-sm font-medium text-soft-mist/70 transition-colors hover:text-pure-signal">
+              Cara Kerja
+            </a>
+            <Link href="/panduan" target="_blank" rel="noopener" className="text-sm font-medium text-soft-mist/70 transition-colors hover:text-pure-signal">
+              Panduan
+            </Link>
           </div>
-        </main>
-      </div>
 
-      {/* Footer with marquee */}
-      <footer className="shrink-0 border-t border-white/10 bg-carbon-panel">
-        <div className="overflow-hidden whitespace-nowrap">
-          <span className="inline-block animate-marquee py-3 pr-12 text-sm font-medium text-electric-indigo">
-            Support Document PDF, DOCX, PPT, TXT, dan URL&nbsp;&nbsp;✦
-          </span>
+          <Link
+            href="/app"
+            className="rounded-sm bg-electric-indigo px-4 py-2 text-sm font-bold text-pure-signal transition-colors hover:bg-cobalt-pulse"
+          >
+            Launch App
+            <span aria-hidden="true" className="ml-1">→</span>
+          </Link>
+        </nav>
+      </header>
+
+      <section className="mx-auto max-w-[1200px] px-6 pb-24 pt-20 sm:pb-32 sm:pt-28">
+        <p className="animate-fade-in-up font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
+          Agen Sintesis Pengetahuan Berbasis AI
+        </p>
+        <h1
+          className="animate-fade-in-up mt-6 max-w-4xl text-4xl font-bold leading-[1.05] tracking-tight text-pure-signal sm:text-6xl lg:text-7xl"
+          style={{ animationDelay: "80ms" }}
+        >
+          Riset Anda,
+          <br className="hidden sm:block" /> disintesis oleh{" "}
+          <span className="text-periwinkle-veil">AI Anda</span>.
+        </h1>
+        <p
+          className="animate-fade-in-up mt-6 max-w-2xl text-base leading-relaxed text-soft-mist/75 sm:text-lg"
+          style={{ animationDelay: "160ms" }}
+        >
+          Kumpulkan semua sumber di satu tempat, ajukan pertanyaan lintas dokumen,
+          dan terima jawaban yang bersitasi — bukan sekadar dugaan. Dari pengumpulan
+          hingga ekspor, satu alur kerja riset yang utuh.
+        </p>
+        <div
+          className="animate-fade-in-up mt-10 flex flex-wrap items-center gap-4"
+          style={{ animationDelay: "240ms" }}
+        >
+          <Link
+            href="/app"
+            className="rounded-sm bg-electric-indigo px-6 py-3.5 text-sm font-bold text-pure-signal transition-colors hover:bg-cobalt-pulse"
+          >
+            Launch App
+            <span aria-hidden="true" className="ml-2">→</span>
+          </Link>
+          <Link
+            href="/panduan"
+            target="_blank"
+            rel="noopener"
+            className="rounded-sm border border-white/20 px-6 py-3.5 text-sm font-semibold text-soft-mist transition-colors hover:bg-graphite-lift"
+          >
+            Lihat Panduan
+          </Link>
         </div>
-        <div className="border-t border-white/5 py-3">
-          <p className="text-center font-mono text-caption uppercase tracking-tight text-soft-mist/45">
-            AI Research &amp; Knowledge Synthesis Agent, © 2026
-          </p>
+        <p
+          className="animate-fade-in-up mt-10 font-mono text-caption uppercase tracking-tight text-soft-mist/40"
+          style={{ animationDelay: "320ms" }}
+        >
+          Mendukung PDF · DOCX · PPTX · TXT · URL
+        </p>
+      </section>
+
+      <section id="fitur" className="scroll-mt-20 border-t border-white/10">
+        <div className="mx-auto max-w-[1200px] px-6 py-16 sm:py-20">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <h2 className="max-w-xl text-2xl font-bold tracking-tight text-pure-signal sm:text-3xl">
+              Dari sumber mentah menjadi hasil jadi.
+            </h2>
+            <p className="max-w-md text-sm leading-relaxed text-soft-mist/65">
+              Tiga kemampuan inti yang menghubungkan dokumen Anda dengan wawasan yang bisa
+              langsung dipakai.
+            </p>
+          </div>
+
+          <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
+            {features.map((feature) => (
+              <div
+                key={feature.number}
+                className="rounded-sm border border-white/10 bg-carbon-panel p-6 transition-colors hover:border-periwinkle-veil/50 hover:bg-graphite-lift/40"
+              >
+                <p className="font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
+                  {feature.number}
+                </p>
+                <h3 className="mt-3 text-lg font-bold text-pure-signal">{feature.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-soft-mist/70">{feature.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="cara-kerja" className="scroll-mt-20 border-t border-white/10">
+        <div className="mx-auto max-w-[1200px] px-6 py-16 sm:py-20">
+          <h2 className="max-w-xl text-2xl font-bold tracking-tight text-pure-signal sm:text-3xl">
+            Cara kerjanya sederhana.
+          </h2>
+          <ol className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-6">
+            {steps.map((step) => (
+              <li key={step.number} className="flex flex-col gap-3">
+                <span className="font-mono text-caption uppercase tracking-tight text-soft-mist/40">
+                  Langkah {step.number}
+                </span>
+                <div className="border-t border-white/15 pt-4">
+                  <h3 className="text-lg font-bold text-pure-signal">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-soft-mist/70">{step.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="border-t border-white/10 bg-carbon-panel">
+        <div className="mx-auto flex max-w-[1200px] flex-col items-start justify-between gap-6 px-6 py-16 sm:flex-row sm:items-center sm:py-20">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-pure-signal sm:text-3xl">
+              Siap memulai riset?
+            </h2>
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-soft-mist/65">
+              Gabungkan semua sumber Anda, tanyakan apa saja, dan ekspor hasilnya dalam
+              hitungan menit.
+            </p>
+          </div>
+          <Link
+            href="/app"
+            className="shrink-0 rounded-sm bg-electric-indigo px-7 py-3.5 text-sm font-bold text-pure-signal transition-colors hover:bg-cobalt-pulse"
+          >
+            Launch App
+            <span aria-hidden="true" className="ml-2">→</span>
+          </Link>
+        </div>
+      </section>
+
+      <footer className="border-t border-white/10">
+        <div className="mx-auto flex max-w-[1200px] flex-col gap-4 px-6 py-8 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-electric-indigo text-xs font-bold text-pure-signal">
+              AI
+            </span>
+            <span className="text-sm font-semibold text-soft-mist">
+              AI Research &amp; Knowledge Synthesis Agent
+            </span>
+          </div>
+          <div className="flex items-center gap-6">
+            <Link
+              href="/panduan"
+              target="_blank"
+              rel="noopener"
+              className="text-xs text-soft-mist/55 transition-colors hover:text-pure-signal"
+            >
+              Panduan
+            </Link>
+            <Link
+              href="/hak-privasi"
+              target="_blank"
+              rel="noopener"
+              className="text-xs text-soft-mist/55 transition-colors hover:text-pure-signal"
+            >
+              Hak &amp; Privasi
+            </Link>
+          </div>
+          <p className="text-xs text-soft-mist/40">© 2026</p>
         </div>
       </footer>
-
-      <ToastHost toasts={toasts} onDismiss={dismissToast} />
-    </div>
+    </main>
   );
 }
-
