@@ -6,34 +6,37 @@ export default function PanduanPage() {
   };
 
   return (
-    <main className="h-screen overflow-y-auto bg-slate-50 text-slate-800">
+    <main className="h-screen overflow-y-auto bg-midnight-void text-soft-mist">
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 sm:py-12">
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={closeGuide}
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+            className="inline-flex items-center gap-2 rounded-sm bg-electric-indigo px-4 py-2 text-sm font-bold text-pure-signal transition-colors hover:bg-cobalt-pulse"
           >
             <span aria-hidden="true">←</span> Kembali ke Dasbor
           </button>
         </div>
 
-        <h1 className="mt-6 text-2xl font-bold text-slate-900 sm:text-3xl">
+        <p className="mt-10 font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
+          {"// PANDUAN"}
+        </p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-pure-signal sm:text-3xl">
           Panduan Penggunaan
         </h1>
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm leading-relaxed text-soft-mist/70">
           AI Research &amp; Knowledge Synthesis Agent — cara mengunggah beberapa sumber
           sekaligus, bertanya, mengelola dokumen, dan mengekspor hasil riset.
         </p>
 
         <section className="mt-8 space-y-6">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">1. Mengunggah Sumber</h2>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed">
+          <div className="rounded-sm border border-white/10 bg-carbon-panel p-5">
+            <h2 className="text-lg font-semibold text-pure-signal">1. Mengunggah Sumber</h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-soft-mist/80">
               <li>
                 Seret &amp; jatuhkan atau pilih beberapa file sekaligus (PDF, DOCX, PPTX,
                 atau TXT). Semua file yang dipilih bersama akan digabungkan ke dalam{" "}
-                <strong>satu sesi obrolan yang sama</strong>, sehingga bisa dibahas secara
+                <strong className="text-pure-signal">satu sesi obrolan yang sama</strong>, sehingga bisa dibahas secara
                 kolektif.
               </li>
               <li>
@@ -42,7 +45,7 @@ export default function PanduanPage() {
               </li>
               <li>
                 Bisa juga menempelkan tautan jurnal/artikel pada kolom URL lalu klik{" "}
-                <strong>Tambah</strong>.
+                <strong className="text-pure-signal">Tambah</strong>.
               </li>
               <li>
                 Gambar atau dokumen pindaian (scan) diproses otomatis dengan OCR agar teksnya
@@ -51,24 +54,24 @@ export default function PanduanPage() {
             </ul>
           </div>
 
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">2. Mengelola Dokumen</h2>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed">
+          <div className="rounded-sm border border-white/10 bg-carbon-panel p-5">
+            <h2 className="text-lg font-semibold text-pure-signal">2. Mengelola Dokumen</h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-soft-mist/80">
               <li>
-                Panel <strong>Dokumen Sumber</strong> menampilkan semua file pada sesi aktif.
+                Panel <strong className="text-pure-signal">Dokumen Sumber</strong> menampilkan semua file pada sesi aktif.
               </li>
               <li>
-                Klik ikon <strong>hapus (×)</strong> di samping sebuah file untuk menghapus
+                Klik ikon <strong className="text-pure-signal">hapus (×)</strong> di samping sebuah file untuk menghapus
                 file tersebut beserta semua indeks/vektornya tanpa memengaruhi sesi lainnya.
               </li>
             </ul>
           </div>
 
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">3. Mengajukan Pertanyaan</h2>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed">
+          <div className="rounded-sm border border-white/10 bg-carbon-panel p-5">
+            <h2 className="text-lg font-semibold text-pure-signal">3. Mengajukan Pertanyaan</h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-soft-mist/80">
               <li>
-                Ketik pertanyaan pada kolom obrolan lalu tekan <strong>Kirim</strong>. Jawaban
+                Ketik pertanyaan pada kolom obrolan lalu tekan <strong className="text-pure-signal">Kirim</strong>. Jawaban
                 dihasilkan hanya dari sumber pada sesi aktif (yang digabungkan).
               </li>
               <li>
@@ -82,15 +85,15 @@ export default function PanduanPage() {
             </ul>
           </div>
 
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">4. Kelola Sesi dan Ekspor</h2>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed">
+          <div className="rounded-sm border border-white/10 bg-carbon-panel p-5">
+            <h2 className="text-lg font-semibold text-pure-signal">4. Kelola Sesi dan Ekspor</h2>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-soft-mist/80">
               <li>
-                Panel <strong>Riwayat Riset</strong> menampilkan sesi-sesi Anda dengan
-                timestamp real-time. Gunakan tombol <strong>+</strong> untuk sesi baru.
+                Panel <strong className="text-pure-signal">Riwayat Riset</strong> menampilkan sesi-sesi Anda dengan
+                timestamp real-time. Gunakan tombol <strong className="text-pure-signal">+</strong> untuk sesi baru.
               </li>
               <li>
-                Pada panel <strong>Ekspor</strong>, pilih format (PDF/Word) lalu klik tombol
+                Pada panel <strong className="text-pure-signal">Ekspor</strong>, pilih format (PDF/Word) lalu klik tombol
                 ekspor untuk mengunduh ringkasan riset sesi aktif.
               </li>
             </ul>

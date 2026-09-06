@@ -241,9 +241,12 @@ export default function UploadSection({
   const showUploadingFeedback = files.some((entry) => entry.status === "uploading");
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h3 className="text-base font-semibold text-slate-900">Unggah Dokumen</h3>
-      <p className="mt-1 text-sm text-slate-500">
+    <section className="rounded-sm border border-white/10 bg-carbon-panel p-5">
+      <p className="font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
+        {"// INGEST"}
+      </p>
+      <h3 className="mt-1 text-base font-bold text-pure-signal">Unggah Dokumen</h3>
+      <p className="mt-1 text-sm leading-relaxed text-soft-mist/70">
         Seret beberapa file sekaligus atau tempelkan tautan. Semua diindeks ke dalam
         satu sesi sehingga bisa dibahas secara kolektif.
       </p>
@@ -255,14 +258,14 @@ export default function UploadSection({
         }}
         onDragLeave={() => setIsDraggingOver(false)}
         onDrop={handleDrop}
-        className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
+        className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-sm border border-dashed px-6 py-10 text-center transition-colors ${
           isDraggingOver
-            ? "border-indigo-500 bg-indigo-50"
-            : "border-slate-300 hover:border-indigo-400 hover:bg-slate-50"
+            ? "border-electric-indigo bg-electric-indigo/10"
+            : "border-white/15 hover:border-periwinkle-veil/60 hover:bg-graphite-lift/40"
         }`}
       >
         <svg
-          className="mb-3 h-10 w-10 text-slate-400"
+          className="mb-3 h-10 w-10 text-soft-mist/45"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -274,13 +277,13 @@ export default function UploadSection({
             d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.4-1.5 3 3 0 012.2 5.475A4.5 4.5 0 0117.25 19.5H6.75z"
           />
         </svg>
-        <p className="text-sm font-medium text-slate-700">
+        <p className="text-sm font-medium text-soft-mist">
           Seret &amp; jatuhkan file di sini
         </p>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 font-mono text-caption uppercase tracking-tight text-soft-mist/45">
           PDF, DOCX, PPTX, atau TXT · maks. 10MB per file
         </p>
-        <label className="mt-4 inline-block cursor-pointer rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700">
+        <label className="mt-4 inline-block cursor-pointer rounded-sm bg-electric-indigo px-4 py-2 text-sm font-bold text-pure-signal transition-colors hover:bg-cobalt-pulse">
           {showUploadingFeedback ? "Mengunggah…" : "Pilih File"}
           <input
             type="file"
@@ -295,10 +298,10 @@ export default function UploadSection({
       {uploadError && (
         <div
           role="alert"
-          className="mt-4 flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+          className="mt-4 flex items-start gap-3 rounded-sm border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300"
         >
           <svg
-            className="mt-0.5 h-5 w-5 shrink-0 text-rose-600"
+            className="mt-0.5 h-5 w-5 shrink-0 text-rose-400"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -315,7 +318,7 @@ export default function UploadSection({
             type="button"
             onClick={() => setUploadError(null)}
             aria-label="Tutup notifikasi"
-            className="shrink-0 rounded-md p-1 text-rose-400 transition-colors hover:bg-rose-100 hover:text-rose-700"
+            className="shrink-0 rounded-sm p-1 text-rose-300 transition-colors hover:bg-rose-500/20"
           >
             <svg
               className="h-4 w-4"
@@ -332,13 +335,13 @@ export default function UploadSection({
 
       {uploadPercent !== null && (
         <div className="mt-4">
-          <div className="flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center justify-between font-mono text-caption uppercase tracking-tight text-soft-mist/55">
             <span>Mengunggah…</span>
             <span>{uploadPercent}%</span>
           </div>
-          <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-graphite-lift">
             <div
-              className="h-full rounded-full bg-indigo-500 transition-[width] duration-200"
+              className="h-full rounded-full bg-electric-indigo transition-[width] duration-200"
               style={{ width: `${uploadPercent}%` }}
             />
           </div>
@@ -350,12 +353,12 @@ export default function UploadSection({
           {files.map((entry) => (
             <li
               key={entry.id}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+              className="flex items-center gap-2 rounded-sm border border-white/10 bg-graphite-lift/50 px-3 py-2 text-sm"
             >
               {entry.status === "uploading" ? (
-                <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-electric-indigo border-t-transparent" />
               ) : entry.status === "success" ? (
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-bold text-white">
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-lime-beacon text-[10px] font-bold text-midnight-void">
                   ✓
                 </span>
               ) : (
@@ -364,7 +367,7 @@ export default function UploadSection({
                 </span>
               )}
               <span
-                className="min-w-0 flex-1 truncate text-slate-700"
+                className="min-w-0 flex-1 truncate text-soft-mist"
                 title={entry.reason ?? entry.name}
               >
                 {entry.name}
@@ -376,7 +379,7 @@ export default function UploadSection({
                   disabled={entry.isDeleting || !entry.documentId}
                   aria-label={`Hapus ${entry.name}`}
                   title="Hapus file ini dari sesi"
-                  className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="shrink-0 rounded-sm p-1 text-soft-mist/45 transition-colors hover:bg-rose-500/15 hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <svg
                     className="h-4 w-4"
@@ -394,7 +397,9 @@ export default function UploadSection({
                 </button>
               )}
               <span
-                className="ml-auto shrink-0 text-xs text-slate-400"
+                className={`ml-auto shrink-0 font-mono text-caption uppercase tracking-tight ${
+                  entry.status === "error" ? "text-rose-300" : "text-soft-mist/50"
+                }`}
                 title={entry.reason}
               >
                 {entry.status === "uploading"
@@ -420,13 +425,13 @@ export default function UploadSection({
             if (event.key === "Enter") handleUrlSubmission();
           }}
           placeholder="Tempel tautan URL atau artikel"
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          className="min-w-0 flex-1 rounded-sm border border-white/10 bg-graphite-lift px-3 py-2 text-sm text-soft-mist outline-none transition-colors placeholder:text-soft-mist/40 focus:border-electric-indigo"
         />
         <button
           type="button"
           onClick={handleUrlSubmission}
           disabled={isUploading}
-          className="shrink-0 rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-900 disabled:opacity-50"
+          className="shrink-0 rounded-sm border border-white/20 px-4 py-2 text-sm font-semibold text-soft-mist transition-colors hover:bg-graphite-lift disabled:opacity-50"
         >
           {isUploading ? "Memproses…" : "Upload"}
         </button>

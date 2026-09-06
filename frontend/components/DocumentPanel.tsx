@@ -16,21 +16,26 @@ export default function DocumentPanel({
   deletingId,
 }: DocumentPanelProps) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-sm border border-white/10 bg-carbon-panel p-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold text-slate-900">Dokumen Sumber</h3>
-        <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+        <div>
+          <p className="font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
+            {"// KONTEKS"}
+          </p>
+          <h3 className="mt-1 text-base font-bold text-pure-signal">Dokumen Sumber</h3>
+        </div>
+        <span className="rounded-full border border-periwinkle-veil/50 px-2.5 py-0.5 font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
           {documents.length}
         </span>
       </div>
 
       {isLoading ? (
         <div className="mt-3 space-y-2">
-          <div className="h-10 animate-pulse rounded-lg bg-slate-100" />
-          <div className="h-10 animate-pulse rounded-lg bg-slate-100" />
+          <div className="h-10 animate-pulse rounded-sm bg-graphite-lift" />
+          <div className="h-10 animate-pulse rounded-sm bg-graphite-lift" />
         </div>
       ) : documents.length === 0 ? (
-        <p className="mt-3 text-sm text-slate-400">
+        <p className="mt-3 text-sm leading-relaxed text-soft-mist/55">
           Belum ada dokumen. Unggah file atau tautan untuk mulai riset.
         </p>
       ) : (
@@ -38,10 +43,10 @@ export default function DocumentPanel({
           {documents.map((document) => (
             <li
               key={document.id}
-              className="group flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+              className="group flex items-center gap-2 rounded-sm border border-white/10 bg-graphite-lift/50 px-3 py-2 text-sm"
             >
               <svg
-                className="h-4 w-4 shrink-0 text-slate-400"
+                className="h-4 w-4 shrink-0 text-soft-mist/50"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -53,7 +58,7 @@ export default function DocumentPanel({
                   d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
                 />
               </svg>
-              <span className="basis-0 flex-1 truncate text-slate-700">
+              <span className="basis-0 flex-1 truncate text-soft-mist">
                 {document.source_name ?? document.filename ?? document.url}
               </span>
               <button
@@ -61,7 +66,7 @@ export default function DocumentPanel({
                 onClick={() => onDelete(document)}
                 disabled={deletingId === document.id}
                 aria-label={`Hapus ${document.source_name ?? document.filename ?? "dokumen"}`}
-                className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                className="shrink-0 rounded-sm p-1 text-soft-mist/45 transition-colors hover:bg-rose-500/15 hover:text-rose-400 disabled:opacity-50"
               >
                 <svg
                   className="h-4 w-4"

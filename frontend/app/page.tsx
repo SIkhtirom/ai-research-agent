@@ -20,6 +20,18 @@ import type {
   ToastItem,
 } from "@/types/dashboard";
 
+const asciiTexture = `)         ,                                  ,
+/        .                               .
+ )  .,'.          ,                  .,;:;:;'
+ )  ,cccccc:'.       .      ,       ,cccccccc:.
+ /   .   ,ccccccc:.        .,;:;.  .:cccccccccc:
+     .;cccccccccccccc;.  .;cccccc;,:ccccccccccc;.
+      .:ccccccccccccccccc,:cccccccccccccccccccc;
+       .,:cccccccccccccccccccccccccccccccccccc:'
+         .,:;;:ccccccccccc;:::::.,;:cccccccc:;;
+                          ..,:,:,...:;:;;;:..
+`;
+
 export default function DashboardPage() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
@@ -306,11 +318,11 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-slate-50">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-midnight-void text-soft-mist">
       {/* Mobile top bar */}
-      <div className="z-40 shrink-0 border-b border-slate-200 bg-white/95 backdrop-blur lg:hidden">
+      <div className="z-40 shrink-0 border-b border-white/10 bg-carbon-panel lg:hidden">
         <div className="flex items-center gap-2 px-4 py-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-electric-indigo text-sm font-bold text-pure-signal">
             AI
           </span>
           <select
@@ -320,7 +332,7 @@ export default function DashboardPage() {
               if (value) handleSelectSession(Number(value));
               else handleNewSession();
             }}
-            className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500"
+            className="min-w-0 flex-1 rounded-sm border border-white/10 bg-graphite-lift px-2 py-2 text-sm text-soft-mist outline-none focus:border-electric-indigo"
           >
             <option value="">Buat sesi baru…</option>
             {sessions.map((session) => (
@@ -332,7 +344,7 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={handleNewSession}
-            className="shrink-0 rounded-md bg-indigo-600 p-2 text-white"
+            className="shrink-0 rounded-sm bg-electric-indigo p-2 text-pure-signal"
             aria-label="Buat sesi baru"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -351,19 +363,31 @@ export default function DashboardPage() {
           onNewSession={handleNewSession}
         />
 
-        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:py-8">
-          <header className="mb-6">
-            <h1 className="text-2xl font-bold text-slate-900">
+        <main className="relative min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:py-8">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 z-0 h-72 select-none overflow-hidden"
+          >
+            <pre className="whitespace-pre font-mono text-[10px] leading-tight text-electric-indigo opacity-[0.14]">
+              {asciiTexture}
+            </pre>
+          </div>
+
+          <header className="relative z-10 mb-6">
+            <p className="font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
+              {"// PROTOKOL RISET DIGITAL"}
+            </p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-pure-signal">
               AI Research &amp; Knowledge Synthesis Agent
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-soft-mist/75">
               Kelola sumber, ajukan pertanyaan, dan ekspor hasil riset Anda. Unggah banyak
               file sekaligus dalam satu sesi untuk dibahas secara kolektif.
             </p>
           </header>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="space-y-6 lg:col-span-1">
+          <div className="relative z-10 grid grid-cols-1 gap-5 lg:grid-cols-3">
+            <div className="space-y-5 lg:col-span-1">
               <UploadSection
                 isUploading={isUploading}
                 onFilesUpload={handleFilesUpload}
@@ -390,14 +414,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Footer with marquee */}
-      <footer className="shrink-0 border-t border-slate-200 bg-white">
-        <div className="overflow-hidden whitespace-nowrap py-3">
-          <span className="inline-block animate-marquee pr-12 text-sm font-medium text-indigo-600">
+      <footer className="shrink-0 border-t border-white/10 bg-carbon-panel">
+        <div className="overflow-hidden whitespace-nowrap">
+          <span className="inline-block animate-marquee py-3 pr-12 text-sm font-medium text-electric-indigo">
             Support Document PDF, DOCX, PPT, TXT, dan URL&nbsp;&nbsp;✦
           </span>
         </div>
-        <div className="py-3">
-          <p className="text-center text-xs text-slate-400">
+        <div className="border-t border-white/5 py-3">
+          <p className="text-center font-mono text-caption uppercase tracking-tight text-soft-mist/45">
             AI Research &amp; Knowledge Synthesis Agent, © 2026
           </p>
         </div>

@@ -20,24 +20,24 @@ const exportButtons: Array<{
     label: "Markdown",
     fileType: ".md",
     description: "Ringkasan & laporan versi teks",
-    accentClass: "hover:border-emerald-300 hover:bg-emerald-50",
-    iconColor: "text-emerald-600",
+    accentClass: "border-lime-beacon/60 hover:bg-lime-beacon/10",
+    iconColor: "text-lime-beacon",
   },
   {
     format: "pdf",
     label: "PDF",
     fileType: ".pdf",
     description: "Dokumen siap cetak & bagikan",
-    accentClass: "hover:border-rose-300 hover:bg-rose-50",
-    iconColor: "text-rose-600",
+    accentClass: "border-orchid-whisper/60 hover:bg-orchid-whisper/10",
+    iconColor: "text-orchid-whisper",
   },
   {
     format: "pptx",
     label: "PPTX",
     fileType: ".pptx",
     description: "Presentasi slide untuk paparan",
-    accentClass: "hover:border-amber-300 hover:bg-amber-50",
-    iconColor: "text-amber-600",
+    accentClass: "border-periwinkle-veil/60 hover:bg-periwinkle-veil/10",
+    iconColor: "text-periwinkle-veil",
   },
 ];
 
@@ -46,9 +46,12 @@ export default function ExportPanel({
   onExport,
 }: ExportPanelProps) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h3 className="text-base font-semibold text-slate-900">Ekspor Hasil</h3>
-      <p className="mt-1 text-sm text-slate-500">
+    <section className="rounded-sm border border-white/10 bg-carbon-panel p-5">
+      <p className="font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
+        {"// EKSPOR"}
+      </p>
+      <h3 className="mt-1 text-base font-bold text-pure-signal">Ekspor Hasil</h3>
+      <p className="mt-1 text-sm leading-relaxed text-soft-mist/70">
         Unduh hasil riset dalam format yang Anda butuhkan.
       </p>
 
@@ -59,13 +62,15 @@ export default function ExportPanel({
             type="button"
             onClick={() => onExport(button.format)}
             disabled={isExporting}
-            className={`flex flex-col items-start rounded-xl border border-slate-200 p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${button.accentClass}`}
+            className={`flex flex-col items-start rounded-sm border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${button.accentClass}`}
           >
             <span className={`text-sm font-bold ${button.iconColor}`}>
               {button.label}
             </span>
-            <span className="mt-0.5 text-xs text-slate-400">{button.fileType}</span>
-            <span className="mt-2 text-xs leading-relaxed text-slate-600">
+            <span className="mt-0.5 font-mono text-caption uppercase tracking-tight text-soft-mist/45">
+              {button.fileType}
+            </span>
+            <span className="mt-2 text-xs leading-relaxed text-soft-mist/70">
               {button.description}
             </span>
           </button>
@@ -73,7 +78,9 @@ export default function ExportPanel({
       </div>
 
       {isExporting && (
-        <p className="mt-3 text-xs text-slate-400">Menyiapkan ekspor…</p>
+        <p className="mt-3 font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
+          Menyiapkan ekspor…
+        </p>
       )}
     </section>
   );

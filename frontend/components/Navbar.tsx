@@ -12,30 +12,30 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <a href="#" className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-midnight-void/90 backdrop-blur">
+      <nav className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-[22px]">
+        <a href="#" className="flex items-center gap-3">
+          <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-electric-indigo text-sm font-bold text-pure-signal">
             AI
           </span>
-          <span className="text-base font-semibold text-slate-900">
+          <span className="text-base font-bold tracking-tight text-pure-signal">
             AI Research &amp; Knowledge Synthesis Agent
           </span>
         </a>
 
-        <div className="hidden items-center gap-6 sm:flex">
+        <div className="hidden items-center gap-7 sm:flex">
           {navigationLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
-              className="text-sm font-medium text-slate-600 transition-colors hover:text-indigo-600"
+              className="font-mono text-caption uppercase tracking-tight text-soft-mist transition-colors hover:text-pure-signal"
             >
-              {link.label}
+              • {link.label}
             </a>
           ))}
           <a
             href="#"
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+            className="rounded-sm bg-electric-indigo px-4 py-2 text-sm font-bold text-pure-signal transition-colors hover:bg-cobalt-pulse"
           >
             Mulai Riset
           </a>
@@ -45,7 +45,7 @@ export default function Navbar() {
           type="button"
           aria-label="Buka menu navigasi"
           onClick={() => setIsMenuOpen((open) => !open)}
-          className="rounded-md p-2 text-slate-700 hover:bg-slate-100 sm:hidden"
+          className="rounded-sm p-2 text-soft-mist hover:bg-graphite-lift sm:hidden"
         >
           <svg
             className="h-6 w-6"
@@ -64,20 +64,20 @@ export default function Navbar() {
       </nav>
 
       {isMenuOpen && (
-        <div className="border-t border-slate-200 bg-white px-4 py-3 sm:hidden">
+        <div className="border-t border-white/10 bg-carbon-panel px-4 py-3 sm:hidden">
           <div className="flex flex-col gap-3">
             {navigationLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="text-sm font-medium text-slate-700 hover:text-indigo-600"
+                className="font-mono text-caption uppercase tracking-tight text-soft-mist hover:text-pure-signal"
               >
-                {link.label}
+                • {link.label}
               </a>
             ))}
             <a
               href="#"
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-center text-sm font-semibold text-white"
+              className="rounded-sm bg-electric-indigo px-4 py-2 text-center text-sm font-bold text-pure-signal"
             >
               Mulai Riset
             </a>

@@ -1,0 +1,33 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# next.js build output
+.next/
+out/
+**/.next/
+**/out/
+
+# python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+**/.venv/
+
+# build outputs
+dist/
+build/
+**/dist/
+**/build/
+
+# logs & os junk
+*.log
+.DS_Store
+Thumbs.db
+
+# environment & secrets
+**/.env
+**/.env.*
+!**/.env.example

@@ -9,19 +9,19 @@ interface ToastHostProps {
 
 const toastStyles: Record<ToastItem["type"], { wrap: string; icon: string; iconClass: string }> = {
   success: {
-    wrap: "border-emerald-200 bg-emerald-50",
+    wrap: "border-lime-beacon/50 bg-carbon-panel",
     icon: "M5 13l4 4L19 7",
-    iconClass: "text-emerald-600",
+    iconClass: "text-lime-beacon",
   },
   error: {
-    wrap: "border-rose-200 bg-rose-50",
+    wrap: "border-rose-500/50 bg-carbon-panel",
     icon: "M6 18L18 6M6 6l12 12",
-    iconClass: "text-rose-600",
+    iconClass: "text-rose-400",
   },
   info: {
-    wrap: "border-slate-200 bg-white",
+    wrap: "border-periwinkle-veil/50 bg-carbon-panel",
     icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-    iconClass: "text-slate-500",
+    iconClass: "text-periwinkle-veil",
   },
 };
 
@@ -35,7 +35,7 @@ export default function ToastHost({ toasts, onDismiss }: ToastHostProps) {
             key={toast.id}
             type="button"
             onClick={() => onDismiss(toast.id)}
-            className={`pointer-events-auto flex items-start gap-3 rounded-lg border p-3 text-left shadow-lg ${style.wrap}`}
+            className={`pointer-events-auto flex items-start gap-3 rounded-sm border p-3 text-left ${style.wrap}`}
           >
             <svg
               className={`mt-0.5 h-5 w-5 shrink-0 ${style.iconClass}`}
@@ -46,7 +46,7 @@ export default function ToastHost({ toasts, onDismiss }: ToastHostProps) {
             >
               <path strokeLinecap="round" strokeLinejoin="round" d={style.icon} />
             </svg>
-            <span className="text-sm text-slate-700">{toast.message}</span>
+            <span className="text-sm leading-relaxed text-soft-mist">{toast.message}</span>
           </button>
         );
       })}

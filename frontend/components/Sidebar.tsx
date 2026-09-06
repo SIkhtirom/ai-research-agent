@@ -68,13 +68,15 @@ export default function Sidebar({
   }, []);
 
   return (
-    <aside className="hidden h-full w-72 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
+    <aside className="hidden h-full w-72 shrink-0 flex-col overflow-hidden border-r border-white/10 bg-carbon-panel lg:flex">
       <div className="flex items-center justify-between px-4 py-4">
-        <h2 className="text-sm font-semibold text-slate-900">Riwayat Riset</h2>
+        <h2 className="font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
+          • Riwayat Riset
+        </h2>
         <button
           type="button"
           onClick={onNewSession}
-          className="rounded-md bg-indigo-600 p-1.5 text-white transition-colors hover:bg-indigo-700"
+          className="rounded-sm bg-electric-indigo p-1.5 text-pure-signal transition-colors hover:bg-cobalt-pulse"
           aria-label="Buat sesi baru"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -86,14 +88,14 @@ export default function Sidebar({
       <div className="flex-1 space-y-2 overflow-y-auto px-3 pb-4">
         {isLoading && sessions.length === 0 && (
           <div className="space-y-2">
-            <div className="h-16 animate-pulse rounded-lg bg-slate-100" />
-            <div className="h-16 animate-pulse rounded-lg bg-slate-100" />
-            <div className="h-16 animate-pulse rounded-lg bg-slate-100" />
+            <div className="h-16 animate-pulse rounded-sm bg-graphite-lift" />
+            <div className="h-16 animate-pulse rounded-sm bg-graphite-lift" />
+            <div className="h-16 animate-pulse rounded-sm bg-graphite-lift" />
           </div>
         )}
 
         {!isLoading && sessions.length === 0 && (
-          <p className="px-2 py-6 text-center text-sm text-slate-400">
+          <p className="px-2 py-6 text-center text-sm leading-relaxed text-soft-mist/55">
             Belum ada sesi riset. Unggah dokumen atau ajukan pertanyaan untuk memulai.
           </p>
         )}
@@ -103,36 +105,36 @@ export default function Sidebar({
             key={session.id}
             type="button"
             onClick={() => onSelectSession(session.id)}
-            className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${
+            className={`w-full rounded-sm border px-3 py-3 text-left transition-colors ${
               session.id === activeSessionId
-                ? "border-indigo-200 bg-indigo-50"
-                : "border-transparent hover:bg-slate-50"
+                ? "border-periwinkle-veil/60 bg-graphite-lift"
+                : "border-transparent hover:bg-graphite-lift/60"
             }`}
           >
-            <p className="truncate text-sm font-medium text-slate-800">
+            <p className="truncate text-sm font-medium text-pure-signal">
               {session.title}
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 font-mono text-caption uppercase tracking-tight text-soft-mist/45">
               {session.source_count} sumber · {formatRelativeTime(session.created_at, now)}
             </p>
           </button>
         ))}
       </div>
 
-      <div className="space-y-2 border-t border-slate-200 px-4 py-4">
+      <div className="space-y-2 border-t border-white/10 px-4 py-4">
         <button
           type="button"
           onClick={() => window.open("/panduan", "_blank", "noopener")}
-          className="block text-xs text-slate-500 transition-colors hover:text-slate-700"
+          className="block font-mono text-caption uppercase tracking-tight text-soft-mist/55 transition-colors hover:text-pure-signal"
         >
-          Panduan Penggunaan
+          • Panduan Penggunaan
         </button>
         <button
           type="button"
           onClick={() => window.open("/hak-privasi", "_blank", "noopener")}
-          className="block text-xs text-slate-500 transition-colors hover:text-slate-700"
+          className="block font-mono text-caption uppercase tracking-tight text-soft-mist/55 transition-colors hover:text-pure-signal"
         >
-          Hak &amp; Privasi
+          • Hak &amp; Privasi
         </button>
       </div>
     </aside>
