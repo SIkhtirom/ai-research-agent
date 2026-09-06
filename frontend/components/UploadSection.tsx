@@ -242,10 +242,7 @@ export default function UploadSection({
 
   return (
     <section className="rounded-sm border border-white/10 bg-carbon-panel p-5">
-      <p className="font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
-        {"// INGEST"}
-      </p>
-      <h3 className="mt-1 text-base font-bold text-pure-signal">Unggah Dokumen</h3>
+      <h3 className="text-base font-bold text-pure-signal">Unggah Dokumen</h3>
       <p className="mt-1 text-sm leading-relaxed text-soft-mist/70">
         Seret beberapa file sekaligus atau tempelkan tautan. Semua diindeks ke dalam
         satu sesi sehingga bisa dibahas secara kolektif.

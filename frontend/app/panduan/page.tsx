@@ -18,10 +18,7 @@ export default function PanduanPage() {
           </button>
         </div>
 
-        <p className="mt-10 font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
-          {"// PANDUAN"}
-        </p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight text-pure-signal sm:text-3xl">
+        <h1 className="mt-10 text-2xl font-bold tracking-tight text-pure-signal sm:text-3xl">
           Panduan Penggunaan
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-soft-mist/70">

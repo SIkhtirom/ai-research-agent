@@ -374,10 +374,7 @@ export default function DashboardPage() {
           </div>
 
           <header className="relative z-10 mb-6">
-            <p className="font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
-              {"// PROTOKOL RISET DIGITAL"}
-            </p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-pure-signal">
+            <h1 className="text-2xl font-bold tracking-tight text-pure-signal">
               AI Research &amp; Knowledge Synthesis Agent
             </h1>
             <p className="mt-1 max-w-2xl text-sm leading-relaxed text-soft-mist/75">

@@ -19,10 +19,7 @@ export default function DocumentPanel({
     <section className="rounded-sm border border-white/10 bg-carbon-panel p-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
-            {"// KONTEKS"}
-          </p>
-          <h3 className="mt-1 text-base font-bold text-pure-signal">Dokumen Sumber</h3>
+          <h3 className="text-base font-bold text-pure-signal">Dokumen Sumber</h3>
         </div>
         <span className="rounded-full border border-periwinkle-veil/50 px-2.5 py-0.5 font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
           {documents.length}

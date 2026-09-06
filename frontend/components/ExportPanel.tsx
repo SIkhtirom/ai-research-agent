@@ -47,10 +47,7 @@ export default function ExportPanel({
 }: ExportPanelProps) {
   return (
     <section className="rounded-sm border border-white/10 bg-carbon-panel p-5">
-      <p className="font-mono text-caption uppercase tracking-tight text-periwinkle-veil">
-        {"// EKSPOR"}
-      </p>
-      <h3 className="mt-1 text-base font-bold text-pure-signal">Ekspor Hasil</h3>
+      <h3 className="text-base font-bold text-pure-signal">Ekspor Hasil</h3>
       <p className="mt-1 text-sm leading-relaxed text-soft-mist/70">
         Unduh hasil riset dalam format yang Anda butuhkan.
       </p>
