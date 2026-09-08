@@ -14,6 +14,8 @@ export interface SessionDocument {
   url?: string | null;
   source_name?: string | null;
   chunk_count?: number;
+  authors?: string[] | string | null;
+  publication_year?: string | null;
 }
 
 export interface FileIngestItem {
@@ -56,6 +58,15 @@ export interface Citation {
   source_type?: string | null;
   filename?: string | null;
   url?: string | null;
+  index?: number;
+  authors?: string[] | string | null;
+  publication_year?: string | null;
+  title?: string | null;
+  journal_name?: string | null;
+  volume?: string | null;
+  issue?: string | null;
+  pages?: string | null;
+  doi?: string | null;
 }
 
 export interface ChatMessage {

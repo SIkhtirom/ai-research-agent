@@ -29,6 +29,10 @@ function resolveApiBaseUrl(raw: string): string {
 
 const API_BASE_URL = resolveApiBaseUrl(API_ENV_VALUE);
 
+// Exported so other modules (e.g. a closing-page keepalive beacon) can build
+// absolute URLs that always target the same backend the fetch helpers use.
+export { API_BASE_URL };
+
 // Open the browser DevTools console to see which server is being called.
 console.debug("[api] API base URL resolved to:", API_BASE_URL);
 

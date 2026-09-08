@@ -38,7 +38,7 @@ _COMPARE_KEYWORDS = (
 
 _CITATION_KEYWORDS = (
     "kutipan",
-    "sitasi",
+    "kutip",
     "sitasi",
     "citation",
     "citations",
@@ -49,6 +49,19 @@ _CITATION_KEYWORDS = (
     "sumbernya",
     "source",
     "cite",
+    "daftar pustaka",
+    "bibliografi",
+    "bibliography",
+    "pustaka",
+    "apa7",
+    "apa 7",
+    "apa style",
+    "pengertian",
+    "definisi",
+    "arti dari",
+    "apa itu",
+    "apa yang dimaksud",
+    "menurut",
 )
 
 # General action requests the assistant must EXECUTE directly, without asking
@@ -358,8 +371,19 @@ class RAGService:
             )
         if want_citations:
             lines.append(
-                "The user explicitly wants citations. Ground each claim with the source "
-                "number in brackets, for example [1], [2], and list every cited source."
+                "The user explicitly wants citations. Ground each statement with "
+                "its source using BOTH a narrative in-text citation and a bracketed "
+                "chunk number, for example: \"Menurut Ganesa Heru Sandi & Yulia "
+                "Fatma (2023), [1]\" or \"... (Sandi, 2023) [1]\". When several "
+                "works cover the same point cite them together, e.g. \"Menurut "
+                "Penulis A & Penulis B (2023) dan Penulis C dkk. (2021), ...\". "
+                "End the answer with a \"Referensi\" list formatted in APA 7th "
+                "edition style using the bibliographic metadata attached to each "
+                "chunk: Penulis, A. B., & Penulis, C. D. (Tahun). Judul artikel. "
+                "Nama Jurnal, Volume(Nomor), Halaman. DOI. When that metadata is "
+                "missing, fall back to the chunk's filename or URL. Never invent "
+                "author names, years, volumes, or page numbers that are not "
+                "present in the metadata."
             )
         else:
             lines.append(
@@ -411,18 +435,46 @@ class RAGService:
     def __describe_source(self, metadata: dict[str, Any]) -> str:
         source_name = metadata.get("filename") or metadata.get("url") or "unknown source"
         source_type = metadata.get("source_type", "unknown")
-        return f"(Source {source_type}: {source_name})"
+        details: list[str] = []
+        authors = metadata.get("authors")
+        if isinstance(authors, list) and authors:
+            details.append(", ".join(str(author) for author in authors))
+        elif authors:
+            details.append(str(authors))
+        year = metadata.get("publication_year")
+        if year:
+            details.append(f"tahun {year}")
+        journal = metadata.get("journal_name")
+        if journal:
+            details.append(str(journal))
+        suffix = f" — {', '.join(details)}" if details else ""
+        return f"(Source {source_type}: {source_name}){suffix}"
 
     def __format_citation(
         self, index: int, metadata: dict[str, Any]
     ) -> dict[str, Any]:
-        return {
+        citation = {
             "index": index,
             "source_type": metadata.get("source_type"),
             "filename": metadata.get("filename"),
             "url": metadata.get("url"),
             "source_name": metadata.get("filename") or metadata.get("url"),
         }
+        for key in (
+            "authors",
+            "publication_year",
+            "title",
+            "journal_name",
+            "volume",
+            "issue",
+            "pages",
+            "doi",
+        ):
+            value = metadata.get(key)
+            if value in (None, "", []):
+                continue
+            citation[key] = value
+        return citation
 
     def __resolve_model_name(self, app_settings: Settings) -> str:
         return app_settings.openai_model

@@ -11,6 +11,11 @@ interface ChatSectionProps {
 }
 
 function citationLabel(citation: Citation): string {
+  const authors = citation.authors;
+  const authorText = Array.isArray(authors) ? authors.join(", ") : authors ?? "";
+  const year = citation.publication_year;
+  const prefix = [authorText, year ? `(${year})` : ""].filter(Boolean).join(" ");
+  if (prefix) return prefix;
   return citation.source_name ?? citation.filename ?? citation.url ?? "Sumber";
 }
 

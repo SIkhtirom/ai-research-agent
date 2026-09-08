@@ -1,5 +1,7 @@
 """API routes for listing sessions and fetching session detail (sources + messages)."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -13,6 +15,8 @@ from ...schemas.message import (
     SessionMessageItem,
 )
 from ...schemas.session import SessionListItem
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["Sessions"])
 
@@ -110,6 +114,34 @@ async def delete_session_document(
     }
 
 
+@router.post("/{session_id}/close")
+async def close_session(session_id: int, db: Session = Depends(get_db)):
+    """Idempotently remove everything tied to a session (documents, vectors,
+    query logs, the session row). Safe to re-fire (e.g. from a calling-page
+    keepalive beacon): missing sessions are simply reported as not cleaned."""
+    existing = SessionRepository().get_by_id(db, session_id)
+    if existing is None:
+        return {"success": True, "session_id": session_id, "cleaned": False}
+
+    removed_documents = DocumentRepository().delete_by_session(db, session_id)
+    removed_messages = QueryLogRepository().delete_by_session(db, session_id)
+    get_vector_store().clear_session(session_id)
+    SessionRepository().delete_by_id(db, session_id)
+    logger.info(
+        "session closed session=%s documents=%d messages=%d",
+        session_id,
+        removed_documents,
+        removed_messages,
+    )
+    return {
+        "success": True,
+        "session_id": session_id,
+        "cleaned": True,
+        "documents_removed": removed_documents,
+        "messages_removed": removed_messages,
+    }
+
+
 def __to_file_item(source: dict) -> SessionDocumentItem:
     return SessionDocumentItem(
         id=source["id"],
@@ -118,6 +150,8 @@ def __to_file_item(source: dict) -> SessionDocumentItem:
         url=source.get("url"),
         source_name=source.get("source_name"),
         chunk_count=source.get("chunk_count", 0),
+        authors=source.get("authors"),
+        publication_year=source.get("publication_year"),
     )
 
 

@@ -8,7 +8,7 @@ import ExportPanel, { type ExportFormat } from "@/components/ExportPanel";
 import Sidebar from "@/components/Sidebar";
 import ToastHost from "@/components/ToastHost";
 import UploadSection from "@/components/UploadSection";
-import { apiClient } from "@/lib/api/client";
+import { apiClient, API_BASE_URL } from "@/lib/api/client";
 import type {
   ChatMessage,
   DeleteDocumentResponse,
@@ -48,6 +48,11 @@ export default function DashboardPage() {
   const toastIdRef = useRef(0);
   const knownSessionIdsRef = useRef<Set<number>>(new Set());
   const streamMessageIdRef = useRef<number | null>(null);
+  const activeSessionIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
 
   const nextMessageId = useCallback(() => {
     messageIdRef.current += 1;
@@ -126,6 +131,44 @@ export default function DashboardPage() {
     // Old sessions remain stored in the backend unless deleted manually, but
     // they are not auto-loaded into the sidebar.
     setIsSessionsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    let hiddenTimer: number | null = null;
+
+    const fireClose = () => {
+      const sessionId = activeSessionIdRef.current;
+      if (sessionId === null) return;
+      navigator.sendBeacon(`${API_BASE_URL}/sessions/${sessionId}/close`);
+    };
+
+    const onPageHide = () => {
+      fireClose();
+    };
+
+    const onBeforeUnload = () => {
+      fireClose();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        hiddenTimer = window.setTimeout(fireClose, 5000);
+      } else if (hiddenTimer !== null) {
+        window.clearTimeout(hiddenTimer);
+        hiddenTimer = null;
+      }
+    };
+
+    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (hiddenTimer !== null) window.clearTimeout(hiddenTimer);
+    };
   }, []);
 
   const handleNewSession = useCallback(() => {
@@ -234,13 +277,6 @@ export default function DashboardPage() {
       }
     },
     [activeSessionId, deletingId, reloadActiveSession, refreshSessions, showToast],
-  );
-
-  const handleDeleteUploadedFile = useCallback(
-    async (documentId: number): Promise<boolean> => {
-      return handleDeleteDocument({ id: documentId } as SessionDocument);
-    },
-    [handleDeleteDocument],
   );
 
   const handleSendQuery = useCallback(
@@ -415,7 +451,6 @@ export default function DashboardPage() {
                 isUploading={isUploading}
                 onFilesUpload={handleFilesUpload}
                 onUrlUpload={handleUrlUpload}
-                onDeleteUploadedFile={handleDeleteUploadedFile}
               />
               <DocumentPanel
                 documents={activeDocuments}

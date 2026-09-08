@@ -25,6 +25,15 @@ class SessionRepository:
             .all()
         )
 
+    def delete_by_id(self, db: Session, session_id: int) -> bool:
+        """Delete a session row and return True when a session existed."""
+        session = db.get(ResearchSession, session_id)
+        if session is None:
+            return False
+        db.delete(session)
+        db.commit()
+        return True
+
 
 class DocumentRepository:
     def create(
@@ -89,6 +98,8 @@ class DocumentRepository:
                     "source_name": metadata.get("filename")
                     or metadata.get("url")
                     or f"document-{document.id}",
+                    "authors": metadata.get("authors"),
+                    "publication_year": metadata.get("publication_year"),
                     "chunk_count": 0,
                 }
             sources[key]["chunk_count"] += 1
@@ -148,4 +159,14 @@ class QueryLogRepository:
 
     def get_by_id(self, db: Session, query_log_id: int) -> QueryLog | None:
         return db.get(QueryLog, query_log_id)
+
+    def delete_by_session(self, db: Session, session_id: int) -> int:
+        """Delete every query log of a session and return how many were removed."""
+        result = (
+            db.query(QueryLog)
+            .filter(QueryLog.session_id == session_id)
+            .delete(synchronize_session=False)
+        )
+        db.commit()
+        return result
 

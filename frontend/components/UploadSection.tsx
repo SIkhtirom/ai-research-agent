@@ -11,7 +11,6 @@ interface UploadSectionProps {
     onProgress?: (percent: number) => void,
   ) => Promise<FileIngestItem[]>;
   onUrlUpload: (url: string) => Promise<boolean>;
-  onDeleteUploadedFile?: (documentId: number) => Promise<boolean>;
 }
 
 type FileStatus = "uploading" | "success" | "error";
@@ -21,8 +20,23 @@ interface UploadedFileEntry {
   name: string;
   status: FileStatus;
   reason?: string;
-  documentId?: number;
-  isDeleting?: boolean;
+  uploadedAt?: string;
+}
+
+function formatUploadTime(iso: string): string {
+  const date = new Date(iso);
+  const now = new Date();
+  const time = date.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const sameDay = date.toDateString() === now.toDateString();
+  if (sameDay) return time;
+  const day = date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+  });
+  return `${day}, ${time}`;
 }
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".pptx", ".txt"];
@@ -72,7 +86,6 @@ export default function UploadSection({
   isUploading,
   onFilesUpload,
   onUrlUpload,
-  onDeleteUploadedFile,
 }: UploadSectionProps) {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [urlInput, setUrlInput] = useState("");
@@ -87,31 +100,17 @@ export default function UploadSection({
     );
   };
 
-  const setEntryDocumentId = (id: number, documentId: number) => {
+  const finalizeEntry = (id: number, status: FileStatus) => {
+    const uploadedAt = new Date().toISOString();
     setFiles((previous) =>
-      previous.map((entry) => (entry.id === id ? { ...entry, documentId } : entry)),
-    );
-  };
-
-  const setEntryDeleting = (id: number, isDeleting: boolean) => {
-    setFiles((previous) =>
-      previous.map((entry) => (entry.id === id ? { ...entry, isDeleting } : entry)),
+      previous.map((entry) =>
+        entry.id === id ? { ...entry, status, uploadedAt } : entry,
+      ),
     );
   };
 
   const removeUploadedEntry = (id: number) => {
     setFiles((previous) => previous.filter((entry) => entry.id !== id));
-  };
-
-  const handleDeleteUploaded = async (entry: UploadedFileEntry) => {
-    if (!entry.documentId || !onDeleteUploadedFile || entry.isDeleting) return;
-    setEntryDeleting(entry.id, true);
-    try {
-      const deleted = await onDeleteUploadedFile(entry.documentId);
-      if (deleted) removeUploadedEntry(entry.id);
-    } finally {
-      setEntryDeleting(entry.id, false);
-    }
   };
 
   const handleBatchUpload = async (selectedFiles: File[]) => {
@@ -199,13 +198,10 @@ export default function UploadSection({
         // The backend did not report this file (e.g. it was rejected locally or
         // the whole request failed). Never mark it as successfully uploaded.
         console.log("[Upload] No backend item for file:", entry.name);
-        updateFile(entry.id, "error");
+        finalizeEntry(entry.id, "error");
         return;
       }
-      if (item.document_ids && item.document_ids.length > 0) {
-        setEntryDocumentId(entry.id, Number(item.document_ids[0]));
-      }
-      updateFile(entry.id, item.success ? "success" : "error");
+      finalizeEntry(entry.id, item.success ? "success" : "error");
     });
     setUploadPercent(null);
   };
@@ -235,7 +231,14 @@ export default function UploadSection({
     const trimmedUrl = urlInput.trim();
     if (!trimmedUrl || isUploading) return;
     setUrlInput("");
-    await onUrlUpload(trimmedUrl);
+    fileIdRef.current += 1;
+    const entryId = fileIdRef.current;
+    setFiles((previous) => [
+      ...previous,
+      { id: entryId, name: trimmedUrl, status: "uploading" },
+    ]);
+    const ok = await onUrlUpload(trimmedUrl);
+    finalizeEntry(entryId, ok ? "success" : "error");
   };
 
   const showUploadingFeedback = files.some((entry) => entry.status === "uploading");
@@ -345,8 +348,24 @@ export default function UploadSection({
         </div>
       )}
 
+      <div className="mt-4 flex items-center justify-between">
+        <span className="font-mono text-caption uppercase tracking-tight text-soft-mist/50">
+          Riwayat Upload
+        </span>
+        {files.length > 0 && (
+          <span className="font-mono text-caption uppercase tracking-tight text-soft-mist/35">
+            {files.length} item
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-xs leading-relaxed text-soft-mist/45">
+        Menghapus entri di sini hanya membersihkan tampilan ini. Dokumen Sumber
+        (data yang dipakai AI) tetap tersimpan sampai dihapus di panel Dokumen
+        Sumber.
+      </p>
+
       {files.length > 0 && (
-        <ul className="scrollbar-hide mt-4 max-h-40 space-y-2 overflow-y-auto pr-1">
+        <ul className="scrollbar-hide mt-2 max-h-40 space-y-2 overflow-y-auto pr-1">
           {files.map((entry) => (
             <li
               key={entry.id}
@@ -363,20 +382,34 @@ export default function UploadSection({
                   ✕
                 </span>
               )}
-              <span
-                className="min-w-0 flex-1 truncate text-soft-mist"
-                title={entry.reason ?? entry.name}
-              >
-                {entry.name}
+              <span className="min-w-0 flex-1">
+                <span
+                  className="block truncate text-soft-mist"
+                  title={entry.reason ?? entry.name}
+                >
+                  {entry.name}
+                </span>
+                <span
+                  className={`block truncate font-mono text-caption uppercase tracking-tight ${
+                    entry.status === "error" ? "text-rose-300/70" : "text-soft-mist/40"
+                  }`}
+                >
+                  {entry.status === "uploading"
+                    ? "Diproses…"
+                    : entry.uploadedAt
+                      ? formatUploadTime(entry.uploadedAt)
+                      : entry.reason
+                        ? entry.reason
+                        : ""}
+                </span>
               </span>
               {entry.status === "success" && (
                 <button
                   type="button"
-                  onClick={() => handleDeleteUploaded(entry)}
-                  disabled={entry.isDeleting || !entry.documentId}
-                  aria-label={`Hapus ${entry.name}`}
-                  title="Hapus file ini dari sesi"
-                  className="shrink-0 rounded-sm p-1 text-soft-mist/45 transition-colors hover:bg-rose-500/15 hover:text-rose-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => removeUploadedEntry(entry.id)}
+                  aria-label={`Hapus ${entry.name} dari riwayat upload`}
+                  title="Hapus dari riwayat upload (dokumen sumber tetap tersimpan)"
+                  className="shrink-0 rounded-sm p-1 text-soft-mist/45 transition-colors hover:bg-rose-500/15 hover:text-rose-400"
                 >
                   <svg
                     className="h-4 w-4"
@@ -404,7 +437,7 @@ export default function UploadSection({
                   : entry.status === "success"
                     ? "Berhasil"
                     : entry.reason
-                      ? `Gagal — ${entry.reason}`
+                      ? "Gagal"
                       : "Gagal"}
               </span>
             </li>

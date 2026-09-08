@@ -12,6 +12,8 @@ class SessionDocumentItem(BaseModel):
     url: str | None = None
     source_name: str | None = None
     chunk_count: int = 0
+    authors: list[str] | str | None = None
+    publication_year: str | None = None
 
 
 class SessionMessageItem(BaseModel):

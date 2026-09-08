@@ -12,6 +12,7 @@ from ...core.config import Settings, settings
 from ...core.embeddings import get_embedding_provider
 from ...db.crud import DocumentRepository
 from ...db.vector_store import VectorStore, get_vector_store
+from .bibliography import extract_bibliography
 from .parsers.parser_factory import get_parser, detect_source_type
 from .parsers.base_parser import ExtractedDocument
 from .security import ContentScanner
@@ -57,6 +58,17 @@ class IngestionService:
             extracted_document = replace(
                 extracted_document,
                 metadata={**extracted_document.metadata, "filename": source_name},
+            )
+        bibliography = extract_bibliography(
+            extracted_document.content_text,
+            pages=extracted_document.pages,
+            source_type=detected_source_type,
+            existing_metadata=extracted_document.metadata,
+        )
+        if bibliography:
+            extracted_document = replace(
+                extracted_document,
+                metadata={**bibliography, **extracted_document.metadata},
             )
         documents = self.__chunk(extracted_document)
         metadata_hooks = self.__build_metadata_hooks(extracted_document, documents, detected_source_type)
