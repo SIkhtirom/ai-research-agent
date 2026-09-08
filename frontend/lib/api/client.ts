@@ -160,6 +160,56 @@ export async function downloadFile(
   return { blob, filename };
 }
 
+export async function streamChatQuery(
+  path: string,
+  body: unknown,
+  onEvent: (payload: Record<string, unknown>) => void,
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorPayload = await response.json().catch(() => null);
+    const message = errorPayload?.detail ?? `Request failed with status ${response.status}`;
+    throw new ApiError(response.status, message);
+  }
+  if (!response.body) {
+    throw new ApiError(0, "Browser tidak mendukung streaming respons.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let boundary: number;
+    while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+      const rawEvent = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      for (const line of rawEvent.split("\n")) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          onEvent(
+            JSON.parse(line.slice("data: ".length)) as Record<string, unknown>,
+          );
+        } catch {
+          // ignore malformed event lines
+        }
+      }
+    }
+  }
+}
+
 export async function uploadFile<T>(path: string, file: File, sessionId?: number): Promise<T> {
   const formData = new FormData();
   formData.append("file", file);
@@ -238,4 +288,5 @@ export const apiClient = {
   uploadFileWithProgress,
   uploadFilesWithProgress,
   downloadFile,
+  streamChatQuery,
 };

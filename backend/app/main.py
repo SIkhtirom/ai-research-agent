@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -5,6 +7,15 @@ from fastapi.responses import JSONResponse
 from .api.routes import chat, export, ingestion, sessions
 from .core.config import settings
 
+# Send application-level logs (RAG diagnostics, ingest tracing, ...) to stderr so
+# they appear in the server log stream alongside uvicorn's own output.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+
+
+logger = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------------- #
 # CORS - accept requests from the app, local dev, and remote tunnel origins.  #
@@ -43,6 +54,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Startup warm-up: load the local embedding model once so the first chat query
+# is not hit by a multi-second cold start (see RAG timing diagnostics).
+@app.on_event("startup")
+def _warmup_embedding_model() -> None:
+    try:
+        from .core.embeddings import get_embedding_provider
+
+        get_embedding_provider(
+            provider=settings.embedding_provider,
+            api_key=settings.openai_api_key or settings.google_api_key,
+        ).embed_query("warmup")
+        logger.info("Embedding model warm-up complete.")
+    except Exception:
+        logger.warning("Embedding model warm-up failed; first query may be slower.", exc_info=True)
 
 
 @app.middleware("http")

@@ -7,6 +7,8 @@ previous work can be pulled back in. Citation markers/source lists are only
 emitted when the user explicitly asks for citations.
 """
 
+import logging
+import time
 from typing import Any
 
 from langchain_core.documents import Document
@@ -17,6 +19,8 @@ from ...core.embeddings import get_embedding_provider
 from ...core.llm import get_llm
 from ...db.crud import DocumentRepository, QueryLogRepository
 from ...db.vector_store import VectorStore, get_vector_store
+
+logger = logging.getLogger(__name__)
 
 _COMPARE_KEYWORDS = (
     "bandingkan",
@@ -108,6 +112,107 @@ class RAGService:
         Returns a dict with keys: generated_response, citations, include_citations,
         comparison_mode.
         """
+        _, prompt_messages, _, citations, want_citations, compare_mode = self.__prepare(
+            db, query, session_id, top_k
+        )
+        start = time.perf_counter()
+        response = self.__invoke_llm(prompt_messages)
+        llm_ms = (time.perf_counter() - start) * 1000
+        generated_response = getattr(response, "content", "") or ""
+        QueryLogRepository().create(
+            db,
+            session_id=session_id,
+            prompt=query,
+            generated_response=generated_response,
+            citations=citations,
+        )
+        logger.info(
+            "rag answer session=%s include_citations=%s comparison_mode=%s llm_ms=%.1f",
+            session_id, want_citations, compare_mode, llm_ms,
+        )
+        return {
+            "generated_response": generated_response,
+            "citations": citations if want_citations else [],
+            "include_citations": want_citations,
+            "comparison_mode": compare_mode,
+        }
+
+    def stream_answer(
+        self,
+        db: Session,
+        query: str,
+        session_id: int,
+        top_k: int | None = None,
+    ):
+        """Stream a RAG answer token-by-token for SSE consumption.
+
+        Yields dicts serialised as SSE events: a leading metadata event
+        (session_id / citations / comparison_mode / chunks), one {delta} event
+        per text chunk, and a final {done: True} event. Falls back to a single
+        non-streamed invoke when the provider does not support streaming.
+        """
+        retrieval_ms, prompt_messages, merged, citations, want_citations, compare_mode = (
+            self.__prepare(db, query, session_id, top_k)
+        )
+        yield {
+            "session_id": session_id,
+            "citations": citations if want_citations else [],
+            "include_citations": want_citations,
+            "comparison_mode": compare_mode,
+            "chunks": len(merged),
+        }
+
+        collected: list[str] = []
+        first_token_ms: float | None = None
+        start = time.perf_counter()
+        try:
+            for chunk in self.__llm.stream(prompt_messages):
+                text = getattr(chunk, "content", None)
+                if not isinstance(text, str) or not text:
+                    continue
+                if first_token_ms is None:
+                    first_token_ms = (time.perf_counter() - start) * 1000
+                collected.append(text)
+                yield {"delta": text}
+        except Exception as exc:  # provider refused streaming -> fall back once
+            logger.warning("RAG LLM stream unavailable; falling back to invoke: %s", exc)
+            response = self.__invoke_llm(prompt_messages)
+            text = getattr(response, "content", "") or ""
+            collected = [text]
+            yield {"delta": text}
+        llm_ms = (time.perf_counter() - start) * 1000
+
+        generated_response = "".join(collected)
+        QueryLogRepository().create(
+            db,
+            session_id=session_id,
+            prompt=query,
+            generated_response=generated_response,
+            citations=citations,
+        )
+        logger.info(
+            "rag stream session=%s chunks=%d retrieval_ms=%.1f first_token_ms=%.1f llm_ms=%.1f total_ms=%.1f",
+            session_id,
+            len(merged),
+            retrieval_ms,
+            first_token_ms or 0.0,
+            llm_ms,
+            retrieval_ms + llm_ms,
+        )
+        yield {"done": True}
+
+    def __prepare(
+        self,
+        db: Session,
+        query: str,
+        session_id: int,
+        top_k: int | None = None,
+    ) -> tuple[float, list[dict[str, str]], list[Document], list[dict[str, Any]], bool, bool]:
+        """Run intent detection + RAG retrieval and build the LLM prompt.
+
+        Returns (retrieval_ms, prompt_messages, retrieved_documents, citations,
+        want_citations, compare_mode).
+        """
         limit = top_k or self.__settings.top_k_chunks
         compare_mode, want_citations, execute_mode = self.__detect_intent(query)
         target_filter = self.__detect_target_file(db, query, session_id)
@@ -120,6 +225,7 @@ class RAGService:
         # the user names a specific document, isolate retrieval to THAT document.
         retrieval_session_id = None if compare_mode else session_id
 
+        start = time.perf_counter()
         relevant_documents = self.__vector_store.similarity_search(
             query,
             self.__embedding_provider,
@@ -148,21 +254,19 @@ class RAGService:
                 "content": f"Question:\n{query}\n\nContext:\n{context_block}",
             },
         ]
-        response = self.__invoke_llm(prompt_messages)
-        generated_response = response.content
-        QueryLogRepository().create(
-            db,
-            session_id=session_id,
-            prompt=query,
-            generated_response=generated_response,
-            citations=citations,
+        retrieval_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            "rag retrieve session=%s top_k=%d chunks=%d retrieval_ms=%.1f",
+            session_id, limit, len(merged), retrieval_ms,
         )
-        return {
-            "generated_response": generated_response,
-            "citations": citations if want_citations else [],
-            "include_citations": want_citations,
-            "comparison_mode": compare_mode,
-        }
+        return (
+            retrieval_ms,
+            prompt_messages,
+            merged,
+            citations,
+            want_citations,
+            compare_mode,
+        )
 
     # ------------------------------------------------------------- intent
     def __detect_intent(self, query: str) -> tuple[bool, bool, bool]:

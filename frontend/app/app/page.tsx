@@ -47,6 +47,7 @@ export default function DashboardPage() {
   const messageIdRef = useRef(0);
   const toastIdRef = useRef(0);
   const knownSessionIdsRef = useRef<Set<number>>(new Set());
+  const streamMessageIdRef = useRef<number | null>(null);
 
   const nextMessageId = useCallback(() => {
     messageIdRef.current += 1;
@@ -252,26 +253,50 @@ export default function DashboardPage() {
       setMessages((previous) => [...previous, userMessage]);
       setIsChatLoading(true);
 
+      let citations: ChatMessage["citations"] | undefined;
+      let includeCitations: boolean | undefined;
       try {
-        const response = await apiClient.post<{
-          session_id: number;
-          generated_response: string;
-          citations: ChatMessage["citations"];
-          include_citations: boolean;
-        }>("/chat/query", { query, session_id: activeSessionId ?? null });
+        await apiClient.streamChatQuery(
+          "/chat/query/stream",
+          { query, session_id: activeSessionId ?? null },
+          (payload) => {
+            if (typeof payload.session_id === "number") {
+              setActiveSessionId(payload.session_id);
+              registerSessionId(payload.session_id);
+            }
+            if (payload.citations !== undefined) {
+              citations = payload.citations as ChatMessage["citations"];
+              includeCitations = payload.include_citations as boolean | undefined;
+            }
 
-        setActiveSessionId(response.session_id);
-        registerSessionId(response.session_id);
-        setMessages((previous) => [
-          ...previous,
-          {
-            id: nextMessageId(),
-            role: "assistant",
-            content: response.generated_response,
-            citations: response.citations,
-            includeCitations: response.include_citations,
+            const delta = payload.delta;
+            if (typeof delta !== "string" || delta.length === 0) return;
+
+            if (streamMessageIdRef.current === null) {
+              const assistantId = nextMessageId();
+              streamMessageIdRef.current = assistantId;
+              setMessages((previous) => [
+                ...previous,
+                {
+                  id: assistantId,
+                  role: "assistant",
+                  content: delta,
+                  citations,
+                  includeCitations,
+                },
+              ]);
+              return;
+            }
+            const currentId = streamMessageIdRef.current;
+            setMessages((previous) =>
+              previous.map((message) =>
+                message.id === currentId
+                  ? { ...message, content: message.content + delta }
+                  : message,
+              ),
+            );
           },
-        ]);
+        );
         await refreshSessions();
       } catch (error) {
         showToast(
@@ -279,6 +304,7 @@ export default function DashboardPage() {
           error instanceof Error ? error.message : "Gagal memproses pertanyaan.",
         );
       } finally {
+        streamMessageIdRef.current = null;
         setIsChatLoading(false);
       }
     },

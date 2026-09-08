@@ -5,6 +5,7 @@ The default provider is a fully local, CPU-only SentenceTransformer model
 and legacy Gemini adapters remain available as alternatives.
 """
 
+from functools import lru_cache
 from typing import Any
 
 from langchain_core.embeddings import Embeddings
@@ -21,12 +22,15 @@ class LocalSentenceTransformerEmbeddings(Embeddings):
     def __init__(self, model_name: str = _DEFAULT_LOCAL_MODEL):
         self.__model_name = model_name
         self.__model: Any | None = None
+        self.__model_lock = __import__("threading").Lock()
 
     def __get_model(self):
         if self.__model is None:
-            from sentence_transformers import SentenceTransformer
+            with self.__model_lock:
+                if self.__model is None:
+                    from sentence_transformers import SentenceTransformer
 
-            self.__model = SentenceTransformer(self.__model_name or _DEFAULT_LOCAL_MODEL)
+                    self.__model = SentenceTransformer(self.__model_name or _DEFAULT_LOCAL_MODEL)
         return self.__model
 
     @staticmethod
@@ -97,7 +101,11 @@ class GoogleGenaiEmbeddingsAdapter(Embeddings):
 
 
 def get_embedding_provider(provider: str = "local", api_key: str | None = None) -> Embeddings:
-    """Create the embedding instance for the requested provider."""
+    """Create the embedding instance for the requested provider.
+
+    Cached so the (potentially expensive) local model is loaded exactly once and
+    shared by RAG retrieval and the startup warm-up.
+    """
     if provider == "local":
         return LocalSentenceTransformerEmbeddings(
             model_name=settings.local_embedding_model
@@ -111,3 +119,6 @@ def get_embedding_provider(provider: str = "local", api_key: str | None = None) 
             base_url=settings.openai_base_url,
         )
     raise ValueError(f"Unknown embedding provider: {provider}")
+
+
+get_embedding_provider = lru_cache(maxsize=None)(get_embedding_provider)
