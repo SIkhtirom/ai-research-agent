@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { formatRelativeTime } from "@/lib/utils/time";
 import type { SessionSummary } from "@/types/dashboard";
 
 interface SidebarProps {
@@ -10,37 +11,6 @@ interface SidebarProps {
   isLoading: boolean;
   onSelectSession: (id: number) => void;
   onNewSession: () => void;
-}
-
-function formatRelativeTime(isoString: string, now: number): string {
-  const timestamp = new Date(isoString).getTime();
-  if (Number.isNaN(timestamp)) return "baru saja";
-  const diffMs = Math.max(0, now - timestamp);
-  const seconds = Math.floor(diffMs / 1000);
-  if (seconds < 45) return "baru saja";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} menit lalu`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} jam lalu`;
-  const date = new Date(timestamp);
-  const today = new Date(now);
-  const isYesterday =
-    new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() -
-      new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() ===
-    86400000;
-  if (isYesterday) {
-    return `Kemarin, ${date.toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })}`;
-  }
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} hari lalu`;
-  return date.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 export default function Sidebar({

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ...core.config import settings
 from ...db.crud import DocumentRepository, QueryLogRepository, SessionRepository
-from ...db.database import get_db
+from ...db.database import get_db, to_utc_iso
 from ...db.vector_store import get_vector_store
 from ...schemas.message import (
     SessionDetailResponse,
@@ -32,11 +32,34 @@ async def list_sessions(db: Session = Depends(get_db)):
             SessionListItem(
                 id=session.id,
                 title=session.title,
-                created_at=session.created_at.isoformat(),
+                created_at=to_utc_iso(session.created_at),
                 source_count=source_count,
             )
         )
     return items
+
+
+@router.delete("")
+async def hard_reset(db: Session = Depends(get_db)):
+    """Full isolation reset: purge every stored session, document, query log,
+    and every vector on disk/FAISS so no remnants from previous runs can ever
+    leak into a new session."""
+    removed_messages = QueryLogRepository().delete_all(db)
+    removed_documents = DocumentRepository().delete_all(db)
+    removed_sessions = SessionRepository().delete_all(db)
+    get_vector_store().clear()
+    logger.info(
+        "hard reset complete sessions=%d documents=%d messages=%d",
+        removed_sessions,
+        removed_documents,
+        removed_messages,
+    )
+    return {
+        "success": True,
+        "sessions_removed": removed_sessions,
+        "documents_removed": removed_documents,
+        "messages_removed": removed_messages,
+    }
 
 
 @router.get("/{session_id}", response_model=SessionDetailResponse)
@@ -152,6 +175,8 @@ def __to_file_item(source: dict) -> SessionDocumentItem:
         chunk_count=source.get("chunk_count", 0),
         authors=source.get("authors"),
         publication_year=source.get("publication_year"),
+        document_number=source.get("document_number"),
+        document_label=source.get("document_label"),
     )
 
 

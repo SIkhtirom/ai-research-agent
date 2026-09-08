@@ -127,10 +127,24 @@ export default function DashboardPage() {
   }, [activeSessionId]);
 
   useEffect(() => {
-    // Trial mode: start with an empty session list on every page load.
-    // Old sessions remain stored in the backend unless deleted manually, but
-    // they are not auto-loaded into the sidebar.
-    setIsSessionsLoading(false);
+    // Fresh start: each page load performs a hard reset on the backend so no
+    // session, document, or vector remnant from a previous run can leak into the
+    // new trial session. The session list stays empty until the next upload.
+    const runHardReset = async () => {
+      knownSessionIdsRef.current.clear();
+      setSessions([]);
+      setActiveSessionId(null);
+      setActiveDocuments([]);
+      setMessages([]);
+      try {
+        await apiClient.del("/sessions");
+      } catch {
+        // A failed reset must not block the UI; an empty list is still shown.
+      } finally {
+        setIsSessionsLoading(false);
+      }
+    };
+    runHardReset();
   }, []);
 
   useEffect(() => {
@@ -172,6 +186,8 @@ export default function DashboardPage() {
   }, []);
 
   const handleNewSession = useCallback(() => {
+    knownSessionIdsRef.current.clear();
+    activeSessionIdRef.current = null;
     setActiveSessionId(null);
     setMessages([]);
     setActiveDocuments([]);
@@ -265,6 +281,12 @@ export default function DashboardPage() {
         showToast("success", `Dokumen dihapus (${response.documents_removed} bagian).`);
         await refreshSessions();
         await reloadActiveSession();
+        if (activeDocuments.length <= 1) {
+          knownSessionIdsRef.current.delete(activeSessionId);
+          activeSessionIdRef.current = null;
+          setActiveSessionId(null);
+          setMessages([]);
+        }
         return true;
       } catch (error) {
         showToast(
@@ -276,7 +298,7 @@ export default function DashboardPage() {
         setDeletingId(null);
       }
     },
-    [activeSessionId, deletingId, reloadActiveSession, refreshSessions, showToast],
+    [activeSessionId, deletingId, activeDocuments.length, reloadActiveSession, refreshSessions, showToast],
   );
 
   const handleSendQuery = useCallback(

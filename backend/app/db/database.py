@@ -18,6 +18,19 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def to_utc_iso(value: datetime) -> str:
+    """Serialize a (possibly naive) datetime as an explicit UTC ISO-8601 string.
+
+    SQLAlchemy/SQLite returns naive datetimes even when written from ``utc_now``,
+    and naive ISO strings are mis-parsed by browsers as local time (causing the
+    classic "7 hours ago" bug on WIB). Normalise to an explicit ``+00:00`` offset
+    so client code always interprets the instant correctly.
+    """
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat()
+
+
 def dumps_json(value) -> str:
     return json.dumps(value)
 

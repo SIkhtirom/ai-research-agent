@@ -70,6 +70,15 @@ class IngestionService:
                 extracted_document,
                 metadata={**bibliography, **extracted_document.metadata},
             )
+        document_number = len(DocumentRepository().list_file_sources(db, session_id)) + 1
+        extracted_document = replace(
+            extracted_document,
+            metadata={
+                **extracted_document.metadata,
+                "document_number": document_number,
+                "document_label": f"Jurnal {document_number}",
+            },
+        )
         documents = self.__chunk(extracted_document)
         metadata_hooks = self.__build_metadata_hooks(extracted_document, documents, detected_source_type)
         vector_ids = self.__vector_store.add_documents(

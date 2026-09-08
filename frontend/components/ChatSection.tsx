@@ -11,6 +11,13 @@ interface ChatSectionProps {
 }
 
 function citationLabel(citation: Citation): string {
+  if (citation.document_label) {
+    const authors = citation.authors;
+    const authorText = Array.isArray(authors) ? authors.join(", ") : authors ?? "";
+    const year = citation.publication_year;
+    const suffix = [authorText, year ? `(${year})` : ""].filter(Boolean).join(" ");
+    return suffix ? `${citation.document_label} · ${suffix}` : citation.document_label;
+  }
   const authors = citation.authors;
   const authorText = Array.isArray(authors) ? authors.join(", ") : authors ?? "";
   const year = citation.publication_year;

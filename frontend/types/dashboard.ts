@@ -16,6 +16,8 @@ export interface SessionDocument {
   chunk_count?: number;
   authors?: string[] | string | null;
   publication_year?: string | null;
+  document_number?: number | null;
+  document_label?: string | null;
 }
 
 export interface FileIngestItem {
@@ -67,6 +69,8 @@ export interface Citation {
   issue?: string | null;
   pages?: string | null;
   doi?: string | null;
+  document_label?: string | null;
+  document_number?: number | null;
 }
 
 export interface ChatMessage {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { formatLocalClock } from "@/lib/utils/time";
 import type { FileIngestItem } from "@/types/dashboard";
 
 interface UploadSectionProps {
@@ -21,22 +22,7 @@ interface UploadedFileEntry {
   status: FileStatus;
   reason?: string;
   uploadedAt?: string;
-}
-
-function formatUploadTime(iso: string): string {
-  const date = new Date(iso);
-  const now = new Date();
-  const time = date.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const sameDay = date.toDateString() === now.toDateString();
-  if (sameDay) return time;
-  const day = date.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-  });
-  return `${day}, ${time}`;
+  displayTime?: string;
 }
 
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".pptx", ".txt"];
@@ -94,6 +80,16 @@ export default function UploadSection({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileIdRef = useRef(0);
 
+  const clearTimersRef = useRef<Map<number, number>>(new Map());
+
+  const clearTimer = (id: number) => {
+    const timer = clearTimersRef.current.get(id);
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      clearTimersRef.current.delete(id);
+    }
+  };
+
   const updateFile = (id: number, status: FileStatus) => {
     setFiles((previous) =>
       previous.map((entry) => (entry.id === id ? { ...entry, status } : entry)),
@@ -104,14 +100,30 @@ export default function UploadSection({
     const uploadedAt = new Date().toISOString();
     setFiles((previous) =>
       previous.map((entry) =>
-        entry.id === id ? { ...entry, status, uploadedAt } : entry,
+        entry.id === id
+          ? { ...entry, status, uploadedAt, displayTime: formatLocalClock(uploadedAt) }
+          : entry,
       ),
     );
+    if (status === "success") {
+      clearTimer(id);
+      const timer = window.setTimeout(() => removeUploadedEntry(id), 10000);
+      clearTimersRef.current.set(id, timer);
+    }
   };
 
   const removeUploadedEntry = (id: number) => {
+    clearTimer(id);
     setFiles((previous) => previous.filter((entry) => entry.id !== id));
   };
+
+  useEffect(() => {
+    const timers = clearTimersRef.current;
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      timers.clear();
+    };
+  }, []);
 
   const handleBatchUpload = async (selectedFiles: File[]) => {
     setUploadError(null);
@@ -396,8 +408,8 @@ export default function UploadSection({
                 >
                   {entry.status === "uploading"
                     ? "Diproses…"
-                    : entry.uploadedAt
-                      ? formatUploadTime(entry.uploadedAt)
+                    : entry.displayTime
+                      ? entry.displayTime
                       : entry.reason
                         ? entry.reason
                         : ""}

@@ -14,6 +14,8 @@ class SessionDocumentItem(BaseModel):
     chunk_count: int = 0
     authors: list[str] | str | None = None
     publication_year: str | None = None
+    document_number: int | None = None
+    document_label: str | None = None
 
 
 class SessionMessageItem(BaseModel):

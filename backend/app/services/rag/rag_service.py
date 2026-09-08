@@ -8,6 +8,7 @@ emitted when the user explicitly asks for citations.
 """
 
 import logging
+import re
 import time
 from typing import Any
 
@@ -21,6 +22,18 @@ from ...db.crud import DocumentRepository, QueryLogRepository
 from ...db.vector_store import VectorStore, get_vector_store
 
 logger = logging.getLogger(__name__)
+
+_FALLBACK_NO_CONTEXT = (
+    "Mohon maaf, informasi mengenai hal tersebut tidak ditemukan dalam dokumen "
+    "sumber yang Anda unggah. Silakan ajukan pertanyaan yang relevan dengan "
+    "konteks dokumen yang tersedia."
+)
+
+# "jurnal ke-5", "jurnal 5", "dokumen ke 5" -> 5
+_SOURCE_ORDINAL_RE = re.compile(
+    r"\b(jurnal|dokumen|sumber)\s*(?:ke\s*[-]?\s*(\d+)|(\d+))\b",
+    re.IGNORECASE,
+)
 
 _COMPARE_KEYWORDS = (
     "bandingkan",
@@ -128,6 +141,26 @@ class RAGService:
         _, prompt_messages, _, citations, want_citations, compare_mode = self.__prepare(
             db, query, session_id, top_k
         )
+        if not prompt_messages:
+            generated_response = _FALLBACK_NO_CONTEXT
+            QueryLogRepository().create(
+                db,
+                session_id=session_id,
+                prompt=query,
+                generated_response=generated_response,
+                citations=[],
+            )
+            logger.info(
+                "rag fallback session=%s chunks=0 comparison_mode=%s",
+                session_id,
+                compare_mode,
+            )
+            return {
+                "generated_response": generated_response,
+                "citations": [],
+                "include_citations": False,
+                "comparison_mode": compare_mode,
+            }
         start = time.perf_counter()
         response = self.__invoke_llm(prompt_messages)
         llm_ms = (time.perf_counter() - start) * 1000
@@ -167,6 +200,29 @@ class RAGService:
         retrieval_ms, prompt_messages, merged, citations, want_citations, compare_mode = (
             self.__prepare(db, query, session_id, top_k)
         )
+        if not prompt_messages:
+            yield {
+                "session_id": session_id,
+                "citations": [],
+                "include_citations": False,
+                "comparison_mode": compare_mode,
+                "chunks": 0,
+            }
+            yield {"delta": _FALLBACK_NO_CONTEXT}
+            QueryLogRepository().create(
+                db,
+                session_id=session_id,
+                prompt=query,
+                generated_response=_FALLBACK_NO_CONTEXT,
+                citations=[],
+            )
+            logger.info(
+                "rag stream fallback session=%s chunks=0 comparison_mode=%s",
+                session_id,
+                compare_mode,
+            )
+            yield {"done": True}
+            return
         yield {
             "session_id": session_id,
             "citations": citations if want_citations else [],
@@ -256,6 +312,15 @@ class RAGService:
         )
         merged = self.__dedupe([*relevant_documents, *early_documents])
 
+        if not merged:
+            logger.info(
+                "rag no-context session=%s top_k=%d chunks=0 retrieval_ms=%.1f",
+                session_id,
+                limit,
+                (time.perf_counter() - start) * 1000,
+            )
+            return None
+
         context_block, citations = self.__build_context(merged, want_citations)
         system_prompt = self.__build_system_prompt(
             compare_mode, want_citations, execute_mode, target_filter is not None
@@ -294,9 +359,10 @@ class RAGService:
     ) -> dict[str, object] | None:
         """Return a metadata filter when the query names one specific uploaded file.
 
-        When the user mentions a particular document (by its file name or URL),
-        retrieval is isolated to that document so the answer is not contaminated
-        by other files in the session. Returns None when no single file is named.
+        Matches on the source file name, its stored label (``Jurnal 3``), its
+        ordinal number (e.g. ``jurnal ke-5``), or any listed author name. Returning
+        None means no single document was referenced, so retrieval stays scoped to
+        the whole session.
         """
         if session_id is None:
             return None
@@ -306,18 +372,40 @@ class RAGService:
             return None
 
         lowered = query.lower()
+        ordinal_match = _SOURCE_ORDINAL_RE.search(lowered)
+        ordinal_number = int(ordinal_match.group(2) or ordinal_match.group(3)) if ordinal_match else None
+
         matched: list[dict[str, object]] = []
         for source in sources:
-            name = source.get("source_name")
-            filename = source.get("filename")
-            url = source.get("url")
-            candidates = [candidate for candidate in (name, filename, url) if candidate]
-            if any(str(candidate).lower() in lowered for candidate in candidates):
+            candidates = [
+                source.get("source_name"),
+                source.get("filename"),
+                source.get("url"),
+                source.get("document_label"),
+            ]
+            candidates = [str(candidate) for candidate in candidates if candidate]
+            name_hit = any(candidate.lower() in lowered for candidate in candidates)
+            number_hit = (
+                ordinal_number is not None
+                and source.get("document_number") == ordinal_number
+            )
+            authors = source.get("authors")
+            author_list = (
+                [str(a).lower() for a in authors]
+                if isinstance(authors, list)
+                else ([str(authors).lower()] if authors else [])
+            )
+            author_hit = any(author and author in lowered for author in author_list)
+            if name_hit or number_hit or author_hit:
                 matched.append(source)
 
-        # Only isolate when exactly ONE distinct file is referenced. If several
-        # are mentioned (e.g. a comparison), fall back to the full session so the
-        # model can still separate outputs via context labelling.
+        if len(matched) > 1:
+            # Resolve to a single target when exactly one ordinal/number matched.
+            numbered = [s for s in matched if s.get("document_number") == ordinal_number]
+            if ordinal_number is not None and len(numbered) == 1:
+                matched = numbered
+            else:
+                return None
         if len(matched) != 1:
             return None
 
@@ -326,6 +414,8 @@ class RAGService:
             return {"filename": source["filename"]}
         if source.get("url"):
             return {"url": source["url"]}
+        if source.get("document_number") is not None:
+            return {"document_number": source["document_number"]}
         return None
 
     def __build_system_prompt(
@@ -339,6 +429,10 @@ class RAGService:
             "You are a precise research assistant. Answer the user's question using ONLY "
             "the context provided below. Never invent information that is not present in "
             "the context. If the context is insufficient, say so clearly.",
+            "LOCKED FALLBACK RULE: If the question canNOT be answered from the provided "
+            "context (the information is missing, unrelated, or off-topic), respond with "
+            "EXACTLY this single sentence and nothing more: \"" + _FALLBACK_NO_CONTEXT + "\". "
+            "Do not add explanations, greetings, or any other text around it.",
         ]
         # Always keep information attributed to its source document; each chunk is
         # prefixed with a source label so you can tell which file it came from.
@@ -377,13 +471,16 @@ class RAGService:
                 "Fatma (2023), [1]\" or \"... (Sandi, 2023) [1]\". When several "
                 "works cover the same point cite them together, e.g. \"Menurut "
                 "Penulis A & Penulis B (2023) dan Penulis C dkk. (2021), ...\". "
-                "End the answer with a \"Referensi\" list formatted in APA 7th "
-                "edition style using the bibliographic metadata attached to each "
-                "chunk: Penulis, A. B., & Penulis, C. D. (Tahun). Judul artikel. "
-                "Nama Jurnal, Volume(Nomor), Halaman. DOI. When that metadata is "
-                "missing, fall back to the chunk's filename or URL. Never invent "
-                "author names, years, volumes, or page numbers that are not "
-                "present in the metadata."
+                "Prefer to reference JURNAL documents by their label (e.g. \"Jurnal "
+                "3\", \"Jurnal ke-5\") so a user can match them by name or ordinal "
+                "number, and name authors by their last name (e.g. \"Herlina "
+                "Tarigan\"). End the answer with a \"Referensi\" list formatted in "
+                "APA 7th edition style using the bibliographic metadata attached to "
+                "each chunk: Penulis, A. B., & Penulis, C. D. (Tahun). Judul "
+                "artikel. Nama Jurnal, Volume(Nomor), Halaman. DOI. When that "
+                "metadata is missing, fall back to the chunk's filename or URL. "
+                "Never invent author names, years, volumes, or page numbers that "
+                "are not present in the metadata."
             )
         else:
             lines.append(
@@ -433,7 +530,12 @@ class RAGService:
         return "\n\n".join(serialized_chunks), citations
 
     def __describe_source(self, metadata: dict[str, Any]) -> str:
-        source_name = metadata.get("filename") or metadata.get("url") or "unknown source"
+        label = (
+            metadata.get("document_label")
+            or metadata.get("filename")
+            or metadata.get("url")
+            or "unknown source"
+        )
         source_type = metadata.get("source_type", "unknown")
         details: list[str] = []
         authors = metadata.get("authors")
@@ -443,12 +545,16 @@ class RAGService:
             details.append(str(authors))
         year = metadata.get("publication_year")
         if year:
-            details.append(f"tahun {year}")
+            details.append(str(year))
         journal = metadata.get("journal_name")
         if journal:
             details.append(str(journal))
+        volume = metadata.get("volume")
+        issue = metadata.get("issue")
+        if volume:
+            details.append(f"Vol. {volume}" + (f"({issue})" if issue else ""))
         suffix = f" — {', '.join(details)}" if details else ""
-        return f"(Source {source_type}: {source_name}){suffix}"
+        return f"(Source {source_type}: {label}){suffix}"
 
     def __format_citation(
         self, index: int, metadata: dict[str, Any]
@@ -459,6 +565,8 @@ class RAGService:
             "filename": metadata.get("filename"),
             "url": metadata.get("url"),
             "source_name": metadata.get("filename") or metadata.get("url"),
+            "document_label": metadata.get("document_label"),
+            "document_number": metadata.get("document_number"),
         }
         for key in (
             "authors",

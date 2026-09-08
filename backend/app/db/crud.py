@@ -34,6 +34,12 @@ class SessionRepository:
         db.commit()
         return True
 
+    def delete_all(self, db: Session) -> int:
+        """Delete every session row and return how many were removed."""
+        result = db.query(ResearchSession).delete(synchronize_session=False)
+        db.commit()
+        return result
+
 
 class DocumentRepository:
     def create(
@@ -75,6 +81,12 @@ class DocumentRepository:
         db.commit()
         return result
 
+    def delete_all(self, db: Session) -> int:
+        """Delete every document and return how many were removed."""
+        result = db.query(Document).delete(synchronize_session=False)
+        db.commit()
+        return result
+
     def get_by_id(self, db: Session, document_id: int) -> Document | None:
         return db.get(Document, document_id)
 
@@ -100,10 +112,18 @@ class DocumentRepository:
                     or f"document-{document.id}",
                     "authors": metadata.get("authors"),
                     "publication_year": metadata.get("publication_year"),
+                    "document_number": metadata.get("document_number"),
+                    "document_label": metadata.get("document_label"),
                     "chunk_count": 0,
                 }
             sources[key]["chunk_count"] += 1
-        return list(sources.values())
+        sources_list = list(sources.values())
+        for index, source in enumerate(sources_list, start=1):
+            if source["document_number"] is None:
+                source["document_number"] = index
+            if source["document_label"] is None:
+                source["document_label"] = f"Jurnal {index}"
+        return sources_list
 
     def delete_file_members(
         self, db: Session, session_id: int, metadata_match: dict
@@ -167,6 +187,12 @@ class QueryLogRepository:
             .filter(QueryLog.session_id == session_id)
             .delete(synchronize_session=False)
         )
+        db.commit()
+        return result
+
+    def delete_all(self, db: Session) -> int:
+        """Delete every query log and return how many were removed."""
+        result = db.query(QueryLog).delete(synchronize_session=False)
         db.commit()
         return result
 
