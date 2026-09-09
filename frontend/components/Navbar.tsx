@@ -15,9 +15,12 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-white/10 bg-midnight-void/90 backdrop-blur">
       <nav className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-[22px]">
         <a href="#" className="flex items-center gap-3">
-          <span className="flex h-8 w-8 items-center justify-center rounded-sm bg-electric-indigo text-sm font-bold text-pure-signal">
-            AI
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+            src="/logo-header.png"
+            alt="Logo AI Research &amp; Knowledge Synthesis Agent"
+            className="h-8 w-8 shrink-0 rounded-sm object-contain"
+          />
           <span className="text-base font-bold tracking-tight text-pure-signal">
             AI Research &amp; Knowledge Synthesis Agent
           </span>

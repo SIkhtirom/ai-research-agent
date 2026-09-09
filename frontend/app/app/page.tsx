@@ -406,9 +406,12 @@ export default function DashboardPage() {
       {/* Mobile top bar */}
       <div className="z-40 shrink-0 border-b border-white/10 bg-carbon-panel lg:hidden">
         <div className="flex items-center gap-2 px-4 py-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-electric-indigo text-sm font-bold text-pure-signal">
-            AI
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+            src="/logo-header.png"
+            alt="Logo AI Research &amp; Knowledge Synthesis Agent"
+            className="h-8 w-8 shrink-0 rounded-sm object-contain"
+          />
           <select
             value={activeSessionId ?? ""}
             onChange={(event) => {
@@ -457,14 +460,22 @@ export default function DashboardPage() {
             </pre>
           </div>
 
-          <header className="relative z-10 mb-6">
-            <h1 className="text-2xl font-bold tracking-tight text-pure-signal">
-              AI Research &amp; Knowledge Synthesis Agent
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-soft-mist/75">
+          <header className="relative z-10 mb-6 flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-header.png"
+              alt="Logo AI Research &amp; Knowledge Synthesis Agent"
+              className="hidden h-9 w-9 shrink-0 rounded-sm object-contain lg:block"
+            />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-pure-signal">
+                AI Research &amp; Knowledge Synthesis Agent
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-soft-mist/75">
               Kelola sumber, ajukan pertanyaan, dan ekspor hasil riset Anda. Unggah banyak
               file sekaligus dalam satu sesi untuk dibahas secara kolektif.
-            </p>
+              </p>
+            </div>
           </header>
 
           <div className="relative z-10 grid grid-cols-1 gap-5 lg:grid-cols-3">

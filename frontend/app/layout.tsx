@@ -18,6 +18,11 @@ export const metadata: Metadata = {
   title: "AI Research & Knowledge Synthesis Agent",
   description:
     "Agen AI cerdas untuk mengumpulkan, mengekstrak, dan mensintesis informasi riset dari berbagai sumber secara otomatis.",
+  icons: {
+    icon: "/favicon.ico?v=2",
+    shortcut: "/favicon.ico?v=2",
+    apple: "/icon.png?v=2",
+  },
 };
 
 export default function RootLayout({
