@@ -319,7 +319,14 @@ class RAGService:
                 limit,
                 (time.perf_counter() - start) * 1000,
             )
-            return None
+            return (
+                (time.perf_counter() - start) * 1000,
+                [],
+                [],
+                [],
+                want_citations,
+                compare_mode,
+            )
 
         context_block, citations = self.__build_context(merged, want_citations)
         system_prompt = self.__build_system_prompt(
