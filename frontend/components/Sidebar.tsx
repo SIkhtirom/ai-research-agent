@@ -92,20 +92,30 @@ export default function Sidebar({
       </div>
 
       <div className="space-y-2 border-t border-white/10 px-4 py-4">
-        <button
-          type="button"
-          onClick={() => window.open("/panduan", "_blank", "noopener")}
+        <a
+          href="/panduan"
+          target="_blank"
+          rel="noopener noreferrer"
           className="block font-mono text-caption uppercase tracking-tight text-soft-mist/55 transition-colors hover:text-pure-signal"
         >
           • Panduan Penggunaan
-        </button>
-        <button
-          type="button"
-          onClick={() => window.open("/hak-privasi", "_blank", "noopener")}
+        </a>
+        <a
+          href="/hak-privasi"
+          target="_blank"
+          rel="noopener noreferrer"
           className="block font-mono text-caption uppercase tracking-tight text-soft-mist/55 transition-colors hover:text-pure-signal"
         >
           • Hak &amp; Privasi
-        </button>
+        </a>
+        <a
+          href="https://conscious-xylophone-3d5.notion.site/Navigasi-Tsunami-Informasi-Strategi-Membangun-AI-Research-Knowledge-Synthesis-Agent-di-AI-HackF-3d65014ed0bd809ebf0bd300aff367da"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block font-mono text-caption uppercase tracking-tight text-soft-mist/55 transition-colors hover:text-pure-signal"
+        >
+          • Artikel
+        </a>
       </div>
     </aside>
   );

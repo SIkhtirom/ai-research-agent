@@ -228,6 +228,14 @@ export default function LandingPage() {
             >
               Hak &amp; Privasi
             </Link>
+            <a
+              href="https://conscious-xylophone-3d5.notion.site/Navigasi-Tsunami-Informasi-Strategi-Membangun-AI-Research-Knowledge-Synthesis-Agent-di-AI-HackF-3d65014ed0bd809ebf0bd300aff367da"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-soft-mist/55 transition-colors hover:text-pure-signal"
+            >
+              Artikel
+            </a>
           </div>
           <p className="text-xs text-soft-mist/40">© 2026</p>
         </div>
