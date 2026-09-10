@@ -7,6 +7,12 @@ export interface SessionSummary {
   source_count: number;
 }
 
+export interface CreatedSession {
+  session_id: number;
+  title: string;
+  created_at: string;
+}
+
 export interface SessionDocument {
   id: number;
   source_type: string;

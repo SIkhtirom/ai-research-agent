@@ -11,6 +11,7 @@ import UploadSection from "@/components/UploadSection";
 import { apiClient, API_BASE_URL } from "@/lib/api/client";
 import type {
   ChatMessage,
+  CreatedSession,
   DeleteDocumentResponse,
   FileIngestItem,
   MultiIngestResponse,
@@ -49,10 +50,19 @@ export default function DashboardPage() {
   const knownSessionIdsRef = useRef<Set<number>>(new Set());
   const streamMessageIdRef = useRef<number | null>(null);
   const activeSessionIdRef = useRef<number | null>(null);
+  const creatingSessionRef = useRef(false);
 
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
   }, [activeSessionId]);
+
+  // Bind the active session id to BOTH the state (for rendering) and the ref
+  // (for request-time reads) so uploads/chat never pick up a stale id even when
+  // a new-session click and the next API call happen back-to-back.
+  const applyActiveSession = useCallback((sessionId: number) => {
+    activeSessionIdRef.current = sessionId;
+    setActiveSessionId(sessionId);
+  }, []);
 
   const nextMessageId = useCallback(() => {
     messageIdRef.current += 1;
@@ -108,12 +118,12 @@ export default function DashboardPage() {
           ]);
         setMessages(historicalMessages);
         setActiveDocuments(detail.documents);
-        setActiveSessionId(sessionId);
+        applyActiveSession(sessionId);
       } catch {
         showToast("error", "Gagal memuat obrolan sesi.");
       }
     },
-    [nextMessageId, showToast],
+    [applyActiveSession, nextMessageId, showToast],
   );
 
   const reloadActiveSession = useCallback(async () => {
@@ -185,13 +195,30 @@ export default function DashboardPage() {
     };
   }, []);
 
-  const handleNewSession = useCallback(() => {
+  const handleNewSession = useCallback(async () => {
+    if (creatingSessionRef.current) return;
+    creatingSessionRef.current = true;
+    // Drop the previous session from the sidebar list and from any in-flight
+    // request, then create + activate a fresh backend session so uploads and
+    // chat queries immediately target the newly created session's own ID.
     knownSessionIdsRef.current.clear();
-    activeSessionIdRef.current = null;
-    setActiveSessionId(null);
     setMessages([]);
     setActiveDocuments([]);
-  }, []);
+    try {
+      const created = await apiClient.post<CreatedSession>("/sessions", {});
+      applyActiveSession(created.session_id);
+      registerSessionId(created.session_id);
+      await refreshSessions();
+    } catch {
+      // If the backend cannot create a session, reset to a blank detached state
+      // so requests fall back to lazy session creation instead of a stale id.
+      activeSessionIdRef.current = null;
+      setActiveSessionId(null);
+      showToast("error", "Gagal membuat sesi baru.");
+    } finally {
+      creatingSessionRef.current = false;
+    }
+  }, [applyActiveSession, registerSessionId, refreshSessions, showToast]);
 
   const handleSelectSession = useCallback(
     (sessionId: number) => {
@@ -208,10 +235,14 @@ export default function DashboardPage() {
       if (files.length === 0) return [];
       setIsUploading(true);
       try {
+        // Read the current session id from the ref so this request always uses
+        // the latest active session (including one just created via '+')
+        // instead of a stale closure value.
+        const requestSessionId = activeSessionIdRef.current ?? undefined;
         const response = await apiClient.uploadFilesWithProgress<MultiIngestResponse>(
           "/ingest/files",
           files,
-          activeSessionId ?? undefined,
+          requestSessionId,
           (percent) => onProgress?.(percent),
         );
         onProgress?.(100);
@@ -220,7 +251,7 @@ export default function DashboardPage() {
         // succeeded and the backend returned a valid session id. A fully-rejected
         // batch must not create an empty session entry in the sidebar/history.
         if (succeeded > 0 && response.session_id > 0) {
-          setActiveSessionId(response.session_id);
+          applyActiveSession(response.session_id);
           registerSessionId(response.session_id);
           await refreshSessions();
           await loadSessionDetail(response.session_id);
@@ -240,7 +271,7 @@ export default function DashboardPage() {
         setIsUploading(false);
       }
     },
-    [activeSessionId, registerSessionId, refreshSessions, loadSessionDetail, showToast],
+    [applyActiveSession, registerSessionId, refreshSessions, loadSessionDetail, showToast],
   );
 
   const handleUrlUpload = useCallback(
@@ -249,9 +280,9 @@ export default function DashboardPage() {
       try {
         const response = await apiClient.post<{ session_id: number; message: string }>(
           "/ingest/url",
-          { url, session_id: activeSessionId ?? null },
+          { url, session_id: activeSessionIdRef.current ?? null },
         );
-        setActiveSessionId(response.session_id);
+        applyActiveSession(response.session_id);
         registerSessionId(response.session_id);
         await refreshSessions();
         await loadSessionDetail(response.session_id);
@@ -267,22 +298,24 @@ export default function DashboardPage() {
         setIsUploading(false);
       }
     },
-    [activeSessionId, registerSessionId, refreshSessions, loadSessionDetail, showToast],
+    [applyActiveSession, registerSessionId, refreshSessions, loadSessionDetail, showToast],
   );
 
   const handleDeleteDocument = useCallback(
     async (document: SessionDocument): Promise<boolean> => {
       if (activeSessionId === null || deletingId !== null) return false;
+      const sessionId = activeSessionIdRef.current;
+      if (sessionId === null) return false;
       setDeletingId(document.id);
       try {
         const response = await apiClient.del<DeleteDocumentResponse>(
-          `/sessions/${activeSessionId}/documents/${document.id}`,
+          `/sessions/${sessionId}/documents/${document.id}`,
         );
         showToast("success", `Dokumen dihapus (${response.documents_removed} bagian).`);
         await refreshSessions();
         await reloadActiveSession();
         if (activeDocuments.length <= 1) {
-          knownSessionIdsRef.current.delete(activeSessionId);
+          knownSessionIdsRef.current.delete(sessionId);
           activeSessionIdRef.current = null;
           setActiveSessionId(null);
           setMessages([]);
@@ -316,10 +349,10 @@ export default function DashboardPage() {
       try {
         await apiClient.streamChatQuery(
           "/chat/query/stream",
-          { query, session_id: activeSessionId ?? null },
+          { query, session_id: activeSessionIdRef.current ?? null },
           (payload) => {
             if (typeof payload.session_id === "number") {
-              setActiveSessionId(payload.session_id);
+              applyActiveSession(payload.session_id);
               registerSessionId(payload.session_id);
             }
             if (payload.citations !== undefined) {
@@ -366,7 +399,7 @@ export default function DashboardPage() {
         setIsChatLoading(false);
       }
     },
-    [activeSessionId, registerSessionId, nextMessageId, refreshSessions, showToast],
+    [applyActiveSession, registerSessionId, nextMessageId, refreshSessions, showToast],
   );
 
   const handleExport = useCallback(

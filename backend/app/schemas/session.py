@@ -8,3 +8,9 @@ class SessionListItem(BaseModel):
     title: str
     created_at: str
     source_count: int
+
+
+class SessionCreateResponse(BaseModel):
+    session_id: int
+    title: str
+    created_at: str

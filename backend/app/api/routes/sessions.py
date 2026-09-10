@@ -14,7 +14,7 @@ from ...schemas.message import (
     SessionDocumentItem,
     SessionMessageItem,
 )
-from ...schemas.session import SessionListItem
+from ...schemas.session import SessionCreateResponse, SessionListItem
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,22 @@ async def list_sessions(db: Session = Depends(get_db)):
             )
         )
     return items
+
+
+@router.post("", response_model=SessionCreateResponse, status_code=status.HTTP_201_CREATED)
+async def create_session(db: Session = Depends(get_db)):
+    """Create a brand-new empty session up front. The frontend binds its ID as
+    the active session immediately so uploads and chat queries always target the
+    freshly created session instead of a stale previously-active one."""
+    new_session = SessionRepository().create(
+        db, user_id=settings.default_user_id, title="Sesi Riset Baru"
+    )
+    logger.info("session created session=%s", new_session.id)
+    return SessionCreateResponse(
+        session_id=new_session.id,
+        title=new_session.title,
+        created_at=to_utc_iso(new_session.created_at),
+    )
 
 
 @router.delete("")
